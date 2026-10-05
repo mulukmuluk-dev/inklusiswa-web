@@ -130,6 +130,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack
   // --- GURU LOGIN LOGIC ---
   const handleGoogleLogin = async () => {
     try {
+      localStorage.setItem("pintara_pending_role", "guru");
       await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {

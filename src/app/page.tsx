@@ -49,11 +49,14 @@ export default function Page() {
         // Cek apakah sudah ada session lokal, jika belum berarti dari OAuth baru
         const currentActive = getActiveSession();
         if (!currentActive) {
+          const pendingRole = localStorage.getItem("pintara_pending_role") || "siswa";
+          localStorage.removeItem("pintara_pending_role");
+          
           const newSession: UserSession = {
             id: session.user.id,
             name: name,
             emailOrNip: email,
-            role: "siswa", // Google login default role siswa
+            role: pendingRole as "siswa" | "guru",
             isLoggedIn: true,
             createdAt: new Date().toISOString(),
           };
@@ -66,7 +69,7 @@ export default function Page() {
               id: session.user.id,
               email: email,
               full_name: name,
-              role: "siswa",
+              role: pendingRole,
               nip_or_nuptk: null,
             }, { onConflict: "id" });
           } catch (e) {
