@@ -12,13 +12,7 @@ export function VoiceControlOverlay() {
   const [shouldShow, setShouldShow] = useState(true);
 
   useEffect(() => {
-    // Selalu tampilkan Voice Control di halaman awal (login/wizard)
-    if (pathname === "/") {
-      setShouldShow(true);
-      return;
-    }
-
-    // Di halaman lain, cek apakah mode aksesibilitas mengharuskan Full Voice Control
+    // Cek apakah mode aksesibilitas mengharuskan Full Voice Control
     const session = getActiveSession();
     if (session && session.isLoggedIn) {
       setShouldShow(isFullVoiceEnabled(session));
@@ -27,7 +21,7 @@ export function VoiceControlOverlay() {
     }
   }, [pathname]);
 
-  // Kontrol Suara MATI secara default saat halaman baru dibuka agar tidak berisik
+  // Kontrol Suara otomatis nyala sesuai dengan shouldShow
   const {
     isListening,
     transcript,
@@ -36,7 +30,7 @@ export function VoiceControlOverlay() {
     isSupported,
     statusMessage,
     toggleListening,
-  } = useVoiceControl(false);
+  } = useVoiceControl(shouldShow);
 
   if (!shouldShow) return null;
 
@@ -53,18 +47,18 @@ export function VoiceControlOverlay() {
       {/* Voice Status Pill Button */}
       <button
         onClick={toggleListening}
-        className={`flex items-center space-x-3 px-5 py-3 rounded-full text-sm font-extrabold shadow-2xl transition-all border transform hover:scale-105 active:scale-95 ${
+        className={`flex items-center space-x-4 px-6 py-4 rounded-full text-base md:text-lg font-black shadow-2xl transition-all border-4 transform hover:scale-105 active:scale-95 ${
           isListening
             ? "bg-slate-900 text-white border-blue-500 shadow-blue-500/30"
-            : "bg-slate-200 text-slate-700 border-slate-300"
+            : "bg-white text-slate-700 border-slate-300"
         }`}
       >
-        <span className="relative flex h-3 w-3">
+        <span className="relative flex h-4 w-4">
           {isListening && (
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
           )}
           <span
-            className={`relative inline-flex rounded-full h-3 w-3 ${
+            className={`relative inline-flex rounded-full h-4 w-4 ${
               isListening ? "bg-blue-500" : "bg-slate-400"
             }`}
           ></span>
@@ -73,8 +67,8 @@ export function VoiceControlOverlay() {
           {isListening
             ? isSpeaking
               ? "Menyebutkan Suara..."
-              : "Mode Suara Aktif (Mendengarkan)"
-            : "Mode Suara Mati (Klik untuk Aktifkan)"}
+              : "Hentikan Suara"
+            : "Nyalakan Suara"}
         </span>
       </button>
 

@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { PintaraLogo } from "./PintaraLogo";
-import { speakGlobal } from "@/lib/soundControl";
 import { supabase } from "@/lib/supabaseClient";
 
 interface LoginScreenProps {
@@ -33,20 +32,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack
     return () => clearInterval(timer);
   }, [lockoutTime]);
 
-  // Audio Companion
-  const playInstructions = () => {
-    if (role === "none") {
-      speakGlobal("Pilih masuk sebagai Siswa atau Guru.");
-    } else if (role === "siswa" && siswaStep === 1) {
-      speakGlobal("Masukkan kode kelas dari gurumu.");
-    } else if (role === "siswa" && siswaStep === 2) {
-      speakGlobal("Masukkan empat angka PIN rahasiamu.");
-    } else if (role === "siswa" && siswaStep === 3) {
-      speakGlobal(`Halo ${studentProfile?.full_name}, apakah ini kamu?`);
-    } else if (role === "guru") {
-      speakGlobal("Silakan masuk menggunakan akun Google Anda.");
-    }
-  };
+  // Audio Companion dihapus sesuai instruksi
 
   // --- SISWA LOGIN LOGIC ---
   const handleRoomCodeSubmit = async (e: React.FormEvent) => {
@@ -58,14 +44,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack
     // Real check happens after PIN.
     setSiswaStep(2);
     setPinCode("");
-    speakGlobal("Kode kelas diterima. Sekarang, masukkan PIN empat angkamu.");
   };
 
   const handlePinInput = (num: string) => {
     if (lockoutTime > 0) return;
     if (pinCode.length >= 4) return;
-    
-    speakGlobal(num); // Audio feedback for the number
     
     const newPin = pinCode + num;
     setPinCode(newPin);
@@ -101,19 +84,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack
         setStudentProfile(student);
         failedAttempts.current = 0;
         setSiswaStep(3);
-        speakGlobal(`Halo ${student.full_name}, apakah ini kamu?`);
       } else {
         // Failed attempt
         failedAttempts.current += 1;
         if (failedAttempts.current >= 3) {
           setLockoutTime(30);
           setErrorMsg("Ups! Kamu salah mengetik 3 kali. Minta bantuan Gurumu atau tunggu 30 detik ya!");
-          speakGlobal("Ups! Kamu salah mengetik 3 kali. Minta bantuan Gurumu atau tunggu sebentar ya!");
           setPinCode("");
           failedAttempts.current = 0; // reset after locking
         } else {
           setErrorMsg("PIN salah, coba lagi ya!");
-          speakGlobal("PIN salah, coba lagi ya!");
           setPinCode("");
         }
       }
@@ -180,14 +160,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack
              </div>
           </div>
           
-          <button 
-            onClick={playInstructions}
-            className="w-12 h-12 bg-[#73B14C] rounded-full border-4 border-[#3C632A] flex items-center justify-center hover:bg-[#FFBA48] transition-colors shadow-[4px_4px_0px_0px_#3C632A] group focus:outline focus:outline-4 focus:outline-[#0066CC]"
-            title="Dengarkan Suara"
-            aria-label="Pemandu Suara"
-          >
-            <svg className="w-6 h-6 text-white group-hover:text-[#3C632A] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M11 5L6 9H2v6h4l5 4V5z" /></svg>
-          </button>
+          {/* Invisible placeholder to balance flex-between */}
+          <div className="w-12 h-12" />
         </div>
 
         {/* VIEW 1: ROLE SELECTION */}

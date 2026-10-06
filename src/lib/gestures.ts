@@ -27,7 +27,7 @@ SayaGesture.addDirection(fp.Finger.Thumb, fp.FingerDirection.DiagonalDownLeft, 0
 SayaGesture.addDirection(fp.Finger.Thumb, fp.FingerDirection.DiagonalDownRight, 0.9);
 
 // 4. Jempol Ke Atas (Bagus / Lanjut)
-export const ThumbsUpGesture = new fp.GestureDescription("Lanjut");
+export const ThumbsUpGesture = new fp.GestureDescription("lanjut");
 ThumbsUpGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.NoCurl, 1.0);
 ThumbsUpGesture.addDirection(fp.Finger.Thumb, fp.FingerDirection.VerticalUp, 1.0);
 ThumbsUpGesture.addCurl(fp.Finger.Index, fp.FingerCurl.FullCurl, 1.0);
@@ -36,7 +36,7 @@ ThumbsUpGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.FullCurl, 1.0);
 ThumbsUpGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.FullCurl, 1.0);
 
 // 5. Isyarat "Kembali" (Telunjuk menunjuk ke kiri)
-export const KembaliGesture = new fp.GestureDescription("Kembali");
+export const KembaliGesture = new fp.GestureDescription("kembali");
 KembaliGesture.addCurl(fp.Finger.Index, fp.FingerCurl.NoCurl, 1.0);
 KembaliGesture.addDirection(fp.Finger.Index, fp.FingerDirection.HorizontalLeft, 1.0);
 KembaliGesture.addDirection(fp.Finger.Index, fp.FingerDirection.DiagonalUpLeft, 0.9);
@@ -44,6 +44,13 @@ KembaliGesture.addCurl(fp.Finger.Thumb, fp.FingerCurl.FullCurl, 1.0);
 KembaliGesture.addCurl(fp.Finger.Middle, fp.FingerCurl.FullCurl, 1.0);
 KembaliGesture.addCurl(fp.Finger.Ring, fp.FingerCurl.FullCurl, 1.0);
 KembaliGesture.addCurl(fp.Finger.Pinky, fp.FingerCurl.FullCurl, 1.0);
+
+// 6. Isyarat "Tutup" (Tangan mengepal / kelima jari ditekuk penuh)
+export const TutupGesture = new fp.GestureDescription("tutup");
+for(let finger of [fp.Finger.Thumb, fp.Finger.Index, fp.Finger.Middle, fp.Finger.Ring, fp.Finger.Pinky]) {
+  TutupGesture.addCurl(finger, fp.FingerCurl.FullCurl, 1.0);
+  TutupGesture.addCurl(finger, fp.FingerCurl.HalfCurl, 0.9);
+}
 
 // 6. Isyarat "Baca/Belajar" (Dua telapak tangan terbuka ke atas seperti pegang buku)
 export const BacaGesture = new fp.GestureDescription("Baca");
@@ -54,12 +61,18 @@ export const BacaGesture = new fp.GestureDescription("Baca");
   BacaGesture.addDirection(finger, fp.FingerDirection.DiagonalUpRight, 0.9);
 });
 
-// Kumpulan model gestur
 export const signGestures = [
   BiologyGesture,
   MathGesture,
   SayaGesture,
   ThumbsUpGesture,
   KembaliGesture,
+  TutupGesture,
   BacaGesture,
+];
+
+export const shortcutGestures = [
+  ThumbsUpGesture,
+  KembaliGesture,
+  TutupGesture
 ];

@@ -1,12 +1,10 @@
 "use client";
-
 import React, { useRef, useState, useEffect } from "react";
 import Webcam from "react-webcam";
 import * as tf from "@tensorflow/tfjs-core";
 import "@tensorflow/tfjs-backend-webgl";
 import * as handpose from "@tensorflow-models/handpose";
-import * as fp from "fingerpose";
-import { allPINTARAGestures } from "@/lib/pintaraGestures";
+import * as knnClassifier from "@tensorflow-models/knn-classifier";
 import { useVoiceControl } from "@/hooks/useVoiceControl";
 import { getActiveSession } from "@/lib/authSession";
 import { usePathname } from "next/navigation";
@@ -32,8 +30,9 @@ export function SignControlOverlay() {
   const [isModelLoading, setIsModelLoading] = useState<boolean>(true);
   const [detectedText, setDetectedText] = useState<string>("");
   const detectedTextRef = useRef<string>("");
-  const [gestureSequence, setGestureSequence] = useState<string[]>([]);
-  const GE = useRef(new fp.GestureEstimator(allPINTARAGestures));
+  
+  const [classifier] = useState(() => knnClassifier.create());
+  const [isTrained, setIsTrained] = useState<boolean>(false);
   
   const pathname = usePathname();
   const [shouldShow, setShouldShow] = useState<boolean>(false);
@@ -51,7 +50,7 @@ export function SignControlOverlay() {
   // Cek apakah mode isyarat aktif
   useEffect(() => {
     const session = getActiveSession();
-    if (session && session.accessibilityConfig?.physicalControlMethod === "isyarat") {
+    if (session && (session.accessibilityConfig?.physicalControlMethod === "isyarat" || session.accessibilityConfig?.mainMode === "sensorik_tunarungu")) {
       setShouldShow(true);
     } else {
       setShouldShow(false);
@@ -67,8 +66,27 @@ export function SignControlOverlay() {
       try {
         await tf.ready();
         const loadedModel = await handpose.load();
+        
+        // Load dataset KNN dari Local Storage
+        const datasetStr = localStorage.getItem("knn_dataset_v1");
+        let hasDataset = false;
+        if (datasetStr) {
+          try {
+            const datasetObj = JSON.parse(datasetStr);
+            Object.keys(datasetObj).forEach((key) => {
+              const dataArray = datasetObj[key];
+              const tensor = tf.tensor2d(dataArray, [dataArray.length / 63, 63]);
+              classifier.setClassifierDataset({ ...classifier.getClassifierDataset(), [key]: tensor });
+            });
+            hasDataset = true;
+          } catch (e) {
+            console.error("Gagal meload dataset dari localstorage", e);
+          }
+        }
+
         if (isMounted) {
           setModel(loadedModel);
+          setIsTrained(hasDataset);
           setIsModelLoading(false);
         }
       } catch (err: any) {
@@ -81,7 +99,16 @@ export function SignControlOverlay() {
       isMounted = false;
       if (requestRef.current) cancelAnimationFrame(requestRef.current);
     };
-  }, [shouldShow]);
+  }, [shouldShow, classifier]);
+
+  const normalizeLandmarks = (landmarks: [number, number, number][]) => {
+    const wrist = landmarks[0];
+    return landmarks.map(point => [
+      point[0] - wrist[0],
+      point[1] - wrist[1],
+      point[2] - wrist[2]
+    ]).flat();
+  };
 
   // Detection Loop
   const detectHands = async () => {
@@ -98,24 +125,24 @@ export function SignControlOverlay() {
         canvasRef.current
       ) {
         const video = webcamRef.current.video;
-      const videoWidth = video.videoWidth;
-      const videoHeight = video.videoHeight;
+        const videoWidth = video.videoWidth;
+        const videoHeight = video.videoHeight;
 
-      webcamRef.current.video.width = videoWidth;
-      webcamRef.current.video.height = videoHeight;
-      canvasRef.current.width = videoWidth;
-      canvasRef.current.height = videoHeight;
+        webcamRef.current.video.width = videoWidth;
+        webcamRef.current.video.height = videoHeight;
+        canvasRef.current.width = videoWidth;
+        canvasRef.current.height = videoHeight;
 
-      try {
-        const hands = await model.estimateHands(video);
-        const ctx = canvasRef.current.getContext("2d");
-        
-        if (ctx) {
-          ctx.clearRect(0, 0, videoWidth, videoHeight);
+        try {
+          const hands = await model.estimateHands(video);
+          const ctx = canvasRef.current.getContext("2d");
           
-          hands.forEach((hand) => {
-            if (hand.landmarks) {
-              const landmarks = hand.landmarks;
+          if (ctx) {
+            ctx.clearRect(0, 0, videoWidth, videoHeight);
+            
+            if (hands.length > 0 && hands[0].landmarks) {
+              const hand = hands[0];
+              const landmarks = hand.landmarks as [number, number, number][];
 
               Object.keys(FINGER_JOINTS).forEach((finger) => {
                 const joints = FINGER_JOINTS[finger];
@@ -140,126 +167,132 @@ export function SignControlOverlay() {
                 ctx.fill();
               });
 
-              // Gesture Prediction
-              const est = GE.current.estimate(landmarks as any, 7.5);
-              if (est && est.gestures && est.gestures.length > 0) {
-                // --- CONTEXT-AWARE FILTERING ---
-                const currText = detectedTextRef.current;
-                const baseText = currText.startsWith("Mengeksekusi:") ? "" : currText;
-                const words = baseText.toLowerCase().trim().split(" ");
-                const currentWordPrefix = words[words.length - 1] || "";
+              // Gesture Prediction with KNN
+              let est: any = null;
+              if (isTrained && classifier.getNumClasses() > 0) {
+                const normalized = normalizeLandmarks(landmarks);
+                const tensor = tf.tensor1d(normalized);
+                const pred = await classifier.predictClass(tensor);
                 
-                // Urutkan berdasarkan skor tertinggi
-                const sortedGestures = est.gestures.sort((a, b) => b.score - a.score);
-                let bestResult: any = sortedGestures[0];
-                
-                // Jika user sedang mengeja (sudah ada minimal 1 huruf terketik), 
-                // kita filter isyarat huruf agar HANYA huruf yang valid dengan kamus yang diterima.
-                let validGestures = sortedGestures;
-                if (currentWordPrefix.length > 0) {
-                  validGestures = sortedGestures.filter(g => {
-                    if (g.name.length > 1) return true; // Isyarat utuh (halo, belajar) selalu lolos
-                    const potentialWord = currentWordPrefix + g.name.toLowerCase();
-                    return SIBI_DICTIONARY.some(w => w.startsWith(potentialWord));
-                  });
-                }
-                
-                if (validGestures.length > 0) {
-                  bestResult = validGestures[0];
-                } else {
-                  bestResult = null; // Tidak ada satupun isyarat yang masuk akal, hiraukan frame ini!
-                }
-                
-                const result = bestResult;
+                est = { 
+                  gestures: Object.keys(pred.confidences).map(key => ({ 
+                    name: key, 
+                    score: pred.confidences[key] * 10 
+                  })).filter(g => g.score > 0) 
+                };
+                tensor.dispose();
+              }
 
-                if (cooldownRef.current > 0) {
-                  cooldownRef.current--;
-                } else if (result && result.name && result.score >= 7.5) {
-                  // Anti-Jitter: Karena FPS diturunkan, cukup tahan 6 frame (~0.4 detik)
-                  if (holdBufferRef.current.name === result.name) {
-                    holdBufferRef.current.frames++;
-                    
-                    if (holdBufferRef.current.frames === 6) {
-                      cooldownRef.current = 15; // Beri jeda 1 detik (15 frame) agar tidak double-trigger
-                      // COMMIT GESTURE
-                      const isShortcut = ["lanjut", "kembali"].includes(result.name);
+              if (est && est.gestures && est.gestures.length > 0) {
+                  // --- CONTEXT-AWARE FILTERING ---
+                  const currText = detectedTextRef.current;
+                  const baseText = currText.startsWith("Mengeksekusi:") ? "" : currText;
+                  const words = baseText.toLowerCase().trim().split(" ");
+                  const currentWordPrefix = words[words.length - 1] || "";
+                  
+                  // Urutkan berdasarkan skor tertinggi
+                  const sortedGestures = est.gestures.sort((a, b) => b.score - a.score);
+                  let bestResult: any = sortedGestures[0];
+                  
+                  // Jika user sedang mengeja (sudah ada minimal 1 huruf terketik), 
+                  // kita filter isyarat huruf agar HANYA huruf yang valid dengan kamus yang diterima.
+                  let validGestures = sortedGestures;
+                  if (currentWordPrefix.length > 0) {
+                    validGestures = sortedGestures.filter(g => {
+                      if (g.name.length > 1) return true; // Isyarat utuh (halo, belajar) selalu lolos
+                      const potentialWord = currentWordPrefix + g.name.toLowerCase();
+                      return SIBI_DICTIONARY.some(w => w.startsWith(potentialWord));
+                    });
+                  }
+                  
+                  if (validGestures.length > 0) {
+                    bestResult = validGestures[0];
+                  } else {
+                    bestResult = null; // Tidak ada satupun isyarat yang masuk akal, hiraukan frame ini!
+                  }
+                  
+                  const result = bestResult;
+
+                  if (cooldownRef.current > 0) {
+                    cooldownRef.current--;
+                  } else if (result && result.name && result.score >= 7.5) {
+                    // Anti-Jitter: Karena FPS diturunkan, cukup tahan 6 frame (~0.4 detik)
+                    if (holdBufferRef.current.name === result.name) {
+                      holdBufferRef.current.frames++;
                       
-                      if (!isShortcut) {
+                      if (holdBufferRef.current.frames === 6) {
+                        cooldownRef.current = 15; // Beri jeda 1 detik (15 frame) agar tidak double-trigger
+                        // COMMIT GESTURE
                         setDetectedText((curr) => {
                           const baseText = curr.startsWith("Mengeksekusi:") ? "" : curr;
-                          const isWord = result.name.length > 1; // "saya", "belajar", dll.
+                          const isWord = result.name.length > 1; // Jika somehow ada yang ngasih input kata utuh
                           // Tambahkan spasi jika inputan berupa kata utuh (bukan huruf)
                           const appendStr = isWord ? ` ${result.name} ` : result.name;
                           const newText = (baseText + appendStr).replace(/\s+/g, " ").trimStart();
                           detectedTextRef.current = newText; // UPDATE REF
-                          
-                          // --- AUTO PREDICT SIBI ---
-                          const words = newText.toLowerCase().trim().split(" ");
-                          const currentWord = words[words.length - 1];
-                          
-                          // Cari apakah kata yang sedang dieja cocok dengan dictionary
-                          if (currentWord && currentWord.length >= 3 && !isWord) {
-                            const match = SIBI_DICTIONARY.find(w => w.startsWith(currentWord));
-                            // Eksekusi otomatis jika sudah dieja lebih dari atau sama dengan setengah kata
-                            if (match && currentWord.length >= Math.ceil(match.length / 2)) {
-                              words[words.length - 1] = match;
-                              const predictedText = words.join(" ");
-                              
-                              detectedTextRef.current = ""; // Reset ref
-                              if (timeoutRef.current) clearTimeout(timeoutRef.current);
-                              setDetectedText(`Mengeksekusi: ${predictedText}`);
-                              processCommand(predictedText);
-                              setTimeout(() => setDetectedText(""), 2500);
-                              return predictedText;
+                            
+                            // --- AUTO PREDICT SIBI ---
+                            const words = newText.toLowerCase().trim().split(" ");
+                            const currentWord = words[words.length - 1];
+                            
+                            // Cari apakah kata yang sedang dieja cocok dengan dictionary
+                            if (currentWord && currentWord.length >= 3 && !isWord) {
+                              const match = SIBI_DICTIONARY.find(w => w.startsWith(currentWord));
+                              // Eksekusi otomatis jika sudah dieja lebih dari atau sama dengan setengah kata
+                              if (match && currentWord.length >= Math.ceil(match.length / 2)) {
+                                words[words.length - 1] = match;
+                                const predictedText = words.join(" ");
+                                
+                                detectedTextRef.current = ""; // Reset ref
+                                if (timeoutRef.current) clearTimeout(timeoutRef.current);
+                                setDetectedText(`Mengeksekusi: ${predictedText}`);
+                                processCommand(predictedText);
+                                setTimeout(() => setDetectedText(""), 2500);
+                                return predictedText;
+                              }
                             }
-                          }
-                          // --------------------------
+                            // --------------------------
 
-                          if (timeoutRef.current) clearTimeout(timeoutRef.current);
-                          
-                          const pendingWord = newText.toLowerCase().trim();
-                          const isStandaloneShortcut = ["saya"].includes(pendingWord);
-                          const waitTime = (pendingWord.length < 3 && !isStandaloneShortcut) ? 7000 : 3000;
+                            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+                            
+                            const pendingWord = newText.toLowerCase().trim();
+                            const isStandaloneShortcut = ["saya"].includes(pendingWord);
+                            const waitTime = (pendingWord.length < 3 && !isStandaloneShortcut) ? 7000 : 3000;
 
-                          timeoutRef.current = setTimeout(() => {
-                            if (pendingWord.length < 3 && !isStandaloneShortcut) {
-                              // Batal eksekusi, cukup kosongkan teks setelah menunggu 7 detik
-                              detectedTextRef.current = ""; // Update ref
-                              setDetectedText("");
-                            } else {
-                              detectedTextRef.current = ""; // Update ref
-                              setDetectedText(`Mengeksekusi: ${pendingWord}`);
-                              processCommand(pendingWord);
-                              setTimeout(() => setDetectedText(""), 2000);
-                            }
-                          }, waitTime);
-                          
-                          return newText;
-                        });
-                      } else {
-                        // Shortcut commands (langsung eksekusi tanpa menunggu 3 detik)
-                        setDetectedText(`Mengeksekusi: ${result.name}`);
-                        processCommand(result.name);
-                        setTimeout(() => setDetectedText(""), 2500);
+                            timeoutRef.current = setTimeout(() => {
+                              if (pendingWord.length < 3 && !isStandaloneShortcut) {
+                                // Batal eksekusi, cukup kosongkan teks setelah menunggu 7 detik
+                                detectedTextRef.current = ""; // Update ref
+                                setDetectedText("");
+                              } else {
+                                detectedTextRef.current = ""; // Update ref
+                                setDetectedText(`Mengeksekusi: ${pendingWord}`);
+                                processCommand(pendingWord);
+                                setTimeout(() => setDetectedText(""), 2000);
+                              }
+                            }, waitTime);
+                            
+                            return newText;
+                          });
                       }
+                    } else {
+                      // Reset buffer jika isyarat berubah
+                      holdBufferRef.current = { name: result.name, frames: 1 };
                     }
                   } else {
-                    // Reset buffer jika isyarat berubah
-                    holdBufferRef.current = { name: result.name, frames: 1 };
+                    holdBufferRef.current = { name: "", frames: 0 };
                   }
                 } else {
                   holdBufferRef.current = { name: "", frames: 0 };
                 }
               } else {
                 holdBufferRef.current = { name: "", frames: 0 };
-              }
             }
-          });
+          }
+        } catch (err) {
+          console.error(err);
         }
-      } catch (err) {
-        console.error(err);
       }
-    }
     } // Tutup blok throttle
 
     requestRef.current = requestAnimationFrame(detectHands);
@@ -272,7 +305,7 @@ export function SignControlOverlay() {
     return () => {
       if (requestRef.current) cancelAnimationFrame(requestRef.current);
     };
-  }, [isModelLoading, model]);
+  }, [isModelLoading, model, isTrained]);
 
   if (!shouldShow) return null;
 
@@ -319,10 +352,18 @@ export function SignControlOverlay() {
                 <span className="text-[10px] font-bold text-[#006E9C]">Menyiapkan AI...</span>
               </div>
             )}
+            
+            {(!isTrained && !isModelLoading) && (
+              <div className="absolute inset-0 bg-black/60 z-20 flex flex-col items-center justify-center space-y-1 p-2 text-center backdrop-blur-[2px]">
+                <span className="text-xl">⚠️</span>
+                <span className="text-[8px] font-bold text-white leading-tight">AI Belum Dilatih</span>
+                <a href="/admin-kamera" target="_blank" className="mt-1 px-3 py-1 bg-amber-500 text-white rounded-full text-[8px] font-bold hover:bg-amber-600 transition-colors">Buka Admin</a>
+              </div>
+            )}
           </div>
 
-          <div className="bg-[#F8FAFC] p-3 rounded-xl border border-slate-200 h-[65px] flex flex-col justify-center shadow-sm">
-            <span className="text-slate-400 block text-[9px] uppercase font-bold tracking-wider mb-0.5">Terjemahan SIBI:</span>
+          <div className="bg-[#F8FAFC] p-3 rounded-xl border border-slate-200 h-[65px] flex flex-col justify-center shadow-sm relative overflow-hidden">
+            <span className="text-slate-400 block text-[9px] uppercase font-bold tracking-wider mb-0.5">Terjemahan ML:</span>
             <span className="text-[#006E9C] font-black text-sm truncate">
               {detectedText || "Menunggu isyarat..."}
             </span>
