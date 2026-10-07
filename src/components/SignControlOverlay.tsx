@@ -1,4 +1,4 @@
-"use client";
+"use client"; // Diperbarui untuk keperluan sistem navigasi AI
 import React, { useRef, useState, useEffect } from "react";
 import Webcam from "react-webcam";
 import * as tf from "@tensorflow/tfjs-core";
