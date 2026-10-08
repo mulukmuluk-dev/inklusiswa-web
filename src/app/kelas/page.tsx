@@ -1028,7 +1028,7 @@ export default function KelasPage() {
                       {isFlipped ? "JAWABAN / PENJELASAN (SISI BELAKANG)" : "PERTANYAAN / KONSEP (SISI DEPAN)"}
                     </span>
 
-                    <div className="my-auto w-full max-h-[170px] md:max-h-[200px] overflow-y-auto px-2 py-1 flex items-center justify-center">
+                    <div className="my-auto w-full max-h-[170px] md:max-h-[200px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] px-2 py-1 flex items-center justify-center">
                       <p className={`${fontSizeClass} leading-relaxed text-center`}>
                         {currentText}
                       </p>

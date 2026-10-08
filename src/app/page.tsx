@@ -586,7 +586,6 @@ export default function Page() {
         <div className="w-full flex items-center justify-between mb-8 px-2">
           <div className="flex items-center gap-2.5">
             <PintaraLogo size="sm" />
-            <span className="font-bold text-slate-900 tracking-tight text-base">PINTARA</span>
           </div>
 
           <div className="flex-1 max-w-xs md:max-w-md mx-6">

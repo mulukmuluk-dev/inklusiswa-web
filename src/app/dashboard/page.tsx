@@ -2487,6 +2487,7 @@ export default function DashboardPage() {
               const form = e.target as any;
               const name = form.elements.studentName.value;
               const preset = form.elements.preset.value;
+              const studentJenjang = form.elements.studentJenjang.value;
               const avatar = form.elements.avatar.value;
               
               // Generate Random 4 Digit PIN
@@ -2503,9 +2504,10 @@ export default function DashboardPage() {
                   email: email,
                   full_name: name,
                   role: "siswa",
+                  jenjang: studentJenjang,
                   current_room_code: teacherRoomCode,
                   avatar_url: avatar,
-                  accessibility_config: { pin_code: pin, mainMode: preset }
+                  accessibility_config: { pin_code: pin, mainMode: preset, jenjang: studentJenjang }
                 });
                 
                 // Download Card
@@ -2514,6 +2516,7 @@ export default function DashboardPage() {
                     <h1 style="color: #3C632A;">PINTARA</h1>
                     <h2>Kartu Akses Siswa</h2>
                     <h3 style="background: white; padding: 10px; border-radius: 10px;">Nama: ${name}</h3>
+                    <h3 style="background: white; padding: 10px; border-radius: 10px;">Jenjang: ${studentJenjang}</h3>
                     <h3 style="background: white; padding: 10px; border-radius: 10px;">Kode Kelas: ${teacherRoomCode}</h3>
                     <h1 style="background: white; padding: 20px; border-radius: 10px; font-size: 40px; color: #FF5685; letter-spacing: 5px;">${pin}</h1>
                     <p>Simpan kode ini dengan aman ya!</p>
@@ -2527,7 +2530,7 @@ export default function DashboardPage() {
                 a.click();
                 URL.revokeObjectURL(url);
 
-                alert(`Siswa berhasil ditambah! Kartu akses sedang diunduh.`);
+                alert(`Siswa ${name} (${studentJenjang}) berhasil ditambah! Kartu akses sedang diunduh.`);
                 e.target.reset();
               } catch(err) {
                 console.error(err);
@@ -2539,8 +2542,21 @@ export default function DashboardPage() {
                 <label className="block font-black text-[#5D3A1A] drop-shadow-sm mb-2">Nama Murid</label>
                 <input name="studentName" required className="w-full px-4 py-3 bg-[#F8F9FA] border-4 border-[#3C632A] rounded-xl font-bold text-[#5D3A1A]" placeholder="Misal: Budi Santoso" />
               </div>
+
+              <div>
+                <label className="block font-black text-[#5D3A1A] drop-shadow-sm mb-2">Kelas / Jenjang SD Murid</label>
+                <select name="studentJenjang" className="w-full px-4 py-3 bg-[#F8F9FA] border-4 border-[#3C632A] rounded-xl font-bold text-[#5D3A1A]">
+                  <option value="Kelas 1 SD">Kelas 1 SD</option>
+                  <option value="Kelas 2 SD">Kelas 2 SD</option>
+                  <option value="Kelas 3 SD">Kelas 3 SD</option>
+                  <option value="Kelas 4 SD">Kelas 4 SD</option>
+                  <option value="Kelas 5 SD">Kelas 5 SD</option>
+                  <option value="Kelas 6 SD">Kelas 6 SD</option>
+                </select>
+              </div>
               
               <div>
+                <label className="block font-black text-[#5D3A1A] drop-shadow-sm mb-2">Mode Aksesibilitas Khusus</label>
                 <select name="preset" className="w-full px-4 py-3 bg-[#F8F9FA] border-4 border-[#3C632A] rounded-xl font-bold text-[#5D3A1A]">
                   <option value="sensorik_tunanetra">Sensorik - Tunanetra</option>
                   <option value="sensorik_tunarungu">Sensorik - Tunarungu</option>
@@ -3528,7 +3544,7 @@ export default function DashboardPage() {
                       {isFlipped ? "JAWABAN / PENJELASAN (BELAKANG)" : "PERTANYAAN / KONSEP (DEPAN)"}
                     </span>
 
-                    <div className="my-auto w-full max-h-[200px] md:max-h-[230px] overflow-y-auto px-2 py-1 flex items-center justify-center">
+                    <div className="my-auto w-full max-h-[200px] md:max-h-[230px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] px-2 py-1 flex items-center justify-center">
                       <p className={`${fontSizeClass} tracking-tight text-center`}>
                         {currentText}
                       </p>

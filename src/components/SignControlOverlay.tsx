@@ -191,14 +191,14 @@ export function SignControlOverlay() {
                   const currentWordPrefix = words[words.length - 1] || "";
                   
                   // Urutkan berdasarkan skor tertinggi
-                  const sortedGestures = est.gestures.sort((a, b) => b.score - a.score);
+                  const sortedGestures = est.gestures.sort((a: { name: string; score: number }, b: { name: string; score: number }) => b.score - a.score);
                   let bestResult: any = sortedGestures[0];
                   
                   // Jika user sedang mengeja (sudah ada minimal 1 huruf terketik), 
                   // kita filter isyarat huruf agar HANYA huruf yang valid dengan kamus yang diterima.
                   let validGestures = sortedGestures;
                   if (currentWordPrefix.length > 0) {
-                    validGestures = sortedGestures.filter(g => {
+                    validGestures = sortedGestures.filter((g: { name: string; score: number }) => {
                       if (g.name.length > 1) return true; // Isyarat utuh (halo, belajar) selalu lolos
                       const potentialWord = currentWordPrefix + g.name.toLowerCase();
                       return SIBI_DICTIONARY.some(w => w.startsWith(potentialWord));
