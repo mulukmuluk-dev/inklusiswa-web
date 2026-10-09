@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { speakGlobal } from "@/lib/soundControl";
 import { playPopSound, playSuccessFanfare, playClueChime } from "@/lib/audioSynthesizer";
 
@@ -36,6 +36,7 @@ export function MathGrade3Game({ levelId, onLevelComplete, accessibilityMode }: 
   const [showClue, setShowClue] = useState<boolean>(false);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const [questionsList, setQuestionsList] = useState<QuestionItem[]>([]);
+  const isProcessingRef = useRef<boolean>(false);
 
   // Sandbox demo states for Phase 1
   const [materiDemoStep, setMateriDemoStep] = useState<number>(0);
@@ -68,6 +69,7 @@ export function MathGrade3Game({ levelId, onLevelComplete, accessibilityMode }: 
     setShowClue(false);
     setIsCompleted(false);
     setMateriDemoStep(0);
+    isProcessingRef.current = false;
 
     const data = getGrade3LevelData(levelId);
     setQuestionsList(shuffleQuestions(data));
@@ -89,15 +91,18 @@ export function MathGrade3Game({ levelId, onLevelComplete, accessibilityMode }: 
     playPopSound();
     setPhase("game");
     setCurrentQuestionIndex(0);
+    setScore(0);
     setSelectedOption(null);
     setIsAnswerChecked(false);
     setWrongAttempts(0);
     setShowClue(false);
+    isProcessingRef.current = false;
     setQuestionsList(shuffleQuestions(levelData));
   };
 
   const handleSelectAnswer = (optionIdx: number) => {
-    if (isAnswerChecked || isCompleted) return;
+    if (isProcessingRef.current || isAnswerChecked || isCompleted) return;
+    isProcessingRef.current = true;
     playPopSound();
     setSelectedOption(optionIdx);
 
@@ -106,7 +111,8 @@ export function MathGrade3Game({ levelId, onLevelComplete, accessibilityMode }: 
 
     if (isCorrect) {
       playSuccessFanfare();
-      setScore((prev) => prev + 1);
+      const updatedScore = Math.min(score + 1, levelData.questions.length);
+      setScore(updatedScore);
       speakGlobal("Hebat! Jawabanmu benar! " + currentQ.explanation);
 
       setTimeout(() => {
@@ -116,9 +122,11 @@ export function MathGrade3Game({ levelId, onLevelComplete, accessibilityMode }: 
           setIsAnswerChecked(false);
           setWrongAttempts(0);
           setShowClue(false);
+          isProcessingRef.current = false;
         } else {
           setIsCompleted(true);
-          const finalScore = score + 1;
+          isProcessingRef.current = false;
+          const finalScore = updatedScore;
           const stars = finalScore >= 9 ? 3 : finalScore >= 7 ? 2 : 1;
           speakGlobal(`Luar biasa! Kamu telah menyelesaikan 10 soal dan meraih ${stars} bintang!`);
         }
@@ -136,13 +144,14 @@ export function MathGrade3Game({ levelId, onLevelComplete, accessibilityMode }: 
       setTimeout(() => {
         setIsAnswerChecked(false);
         setSelectedOption(null);
+        isProcessingRef.current = false;
       }, 1200);
     }
   };
 
   const handleFinishLevel = () => {
     playSuccessFanfare();
-    const finalScore = score;
+    const finalScore = Math.min(score, levelData.questions.length);
     const stars = finalScore >= 9 ? 3 : finalScore >= 7 ? 2 : 1;
     onLevelComplete(levelId, stars);
   };
@@ -378,7 +387,7 @@ export function MathGrade3Game({ levelId, onLevelComplete, accessibilityMode }: 
           </div>
 
           <div className="bg-[#FFDF59] border-2 border-[#3C632A] px-6 py-3 rounded-2xl font-black text-xl text-[#3C632A] mb-6">
-            Skor Akhir: {score} dari 10 Soal Benar
+            Skor Akhir: {Math.min(score, levelData.questions.length)} dari {levelData.questions.length} Soal Benar
           </div>
 
           <button

@@ -77,8 +77,8 @@ export interface ClassRoom {
 const INITIAL_CLASSES: Record<string, ClassRoom> = {
   "INKLU-1234": {
     code: "INKLU-1234",
-    className: "Kelas Inklusif",
-    subject: "Umum",
+    className: "Kelas Inklusif 4-A",
+    subject: "IPAS",
     teacherName: "Bu Sarah, S.Pd.",
     announcements: [
       {
@@ -99,58 +99,58 @@ const INITIAL_CLASSES: Record<string, ClassRoom> = {
     ],
     materials: [
       {
-        id: "mat-bio-1",
-        title: "Struktur & Fungsi Sel",
-        summary: "Memahami membran sel, sitoplasma, nukleus, mitokondria, dan kloroplas.",
-        content: "Sel merupakan unit terkecil kehidupan. Sel tumbuhan memiliki dinding sel dan kloroplas untuk fotosintesis, sedangkan sel hewan memiliki sentrosom untuk pembelahan sel.",
+        id: "mat-ipas-1",
+        title: "Bagian Tubuh Tumbuhan & Fungsinya",
+        summary: "Mengenal bagian utama tumbuhan: akar, batang, daun, bunga, serta fotosintesis.",
+        content: "Tumbuhan terdiri dari akar, batang, daun, dan bunga. Akar berfungsi menyerap air dan hara dari tanah. Batang mengalirkan air ke daun. Daun hijau memasak makanan melalui fotosintesis dengan bantuan sinar matahari.",
         flashcards: [
           {
             id: "fc-1",
-            front: "Apa fungsi utama Mitokondria dalam sel?",
-            back: "Mitokondria berfungsi sebagai tempat respirasi seluler dan penghasil energi (ATP).",
+            front: "Apa fungsi utama akar pada tumbuhan?",
+            back: "Menyerap air dan zat hara dari dalam tanah serta memperkokoh berdirinya tumbuhan.",
           },
           {
             id: "fc-2",
-            front: "Organel apa yang membedakan sel tumbuhan dan sel hewan?",
-            back: "Dinding sel, Kloroplas, dan Vakuola besar yang hanya ada pada sel tumbuhan.",
+            front: "Apa fungsi daun hijau pada tumbuhan?",
+            back: "Sebagai tempat fotosintesis, yaitu memasak makanan dengan bantuan sinar matahari dan zat hijau daun (klorofil).",
           },
         ],
       },
     ],
     quizzes: [
       {
-        id: "quiz-bio-1",
-        title: "Latihan Soal: Organel dan Sel",
-        description: "Uji pemahamanmu mengenai organel sel tumbuhan dan hewan.",
+        id: "quiz-ipas-1",
+        title: "Latihan Soal: Bagian Tubuh Tumbuhan",
+        description: "Uji pemahamanmu mengenai fungsi akar, daun, dan batang tumbuhan.",
         questions: [
           {
             id: "q1",
-            question: "Organel sel yang berfungsi menghasilkan energi ATP adalah...",
-            options: ["Ribosom", "Mitokondria", "Lisosom", "Badan Golgi"],
-            answerIndex: 1,
-            explanation: "Mitokondria dikenal sebagai tempat pembentukan energi ATP.",
+            question: "Bagian tumbuhan yang berfungsi menyerap air dari dalam tanah adalah...",
+            options: ["Akar", "Batang", "Daun", "Bunga"],
+            answerIndex: 0,
+            explanation: "Akar berada di dalam tanah untuk menyerap air dan zat hara.",
           },
         ],
       },
     ],
     exams: [
       {
-        id: "exam-bio-1",
-        title: "Ujian Biologi Bab 1: Biologi Sel & Metabolisme",
+        id: "exam-ipas-1",
+        title: "Ujian IPAS Bab 1: Bagian Tumbuhan & Fotosintesis",
         durationMinutes: 45,
         questions: [
           {
             id: "eq1",
             type: "pg",
-            question: "Proses pembelahan sel yang menghasilkan dua sel anakan identik disebut...",
-            options: ["Meiosis", "Mitosis", "Amitosis", "Gametogenesis"],
-            answerIndex: 1,
+            question: "Proses pembuatan makanan pada tumbuhan hijau dengan bantuan sinar matahari disebut...",
+            options: ["Fotosintesis", "Penyerbukan", "Perkecambahan", "Pernapasan"],
+            answerIndex: 0,
           },
           {
             id: "eq3",
             type: "essay",
-            question: "Jelaskan secara singkat perbedaan utama antara respirasi seluler aerob dan anaerob!",
-            sampleAnswer: "Respirasi aerob membutuhkan oksigen bebas dan menghasilkan energi ATP jauh lebih banyak, sedangkan anaerob berlangsung tanpa oksigen.",
+            question: "Jelaskan mengapa tumbuhan memerlukan cahaya matahari untuk hidup!",
+            sampleAnswer: "Tumbuhan memerlukan cahaya matahari untuk melakukan fotosintesis, yaitu memasak makanan yang menjadi sumber energi bagi tumbuhan dan makhluk hidup lainnya.",
             maxPoints: 25,
           },
         ],

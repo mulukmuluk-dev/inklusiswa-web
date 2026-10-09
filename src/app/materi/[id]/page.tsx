@@ -14,16 +14,11 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
   const subjectTitles: Record<string, string> = {
     matematika: "Matematika",
     indonesia: "Bahasa Indonesia",
+    pancasila: "Pendidikan Pancasila",
+    pkn: "Pendidikan Pancasila",
+    "seni-budaya": "Seni dan Budaya",
     inggris: "Bahasa Inggris",
-    biologi: "Biologi",
-    kimia: "Kimia",
-    fisika: "Fisika",
-    ekonomi: "Ekonomi",
-    sosiologi: "Sosiologi",
-    geografi: "Geografi",
-    sejarah: "Sejarah",
-    pkn: "Pendidikan Pancasila (PKN)",
-    "cerdas-memilih": "Yuk, Cerdas Memilih!",
+    ipas: "Ilmu Pengetahuan Alam dan Sosial (IPAS)",
   };
 
   const baseTitle = subjectTitles[subjectId] || subjectId.toUpperCase();

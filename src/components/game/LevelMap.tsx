@@ -50,7 +50,106 @@ export function LevelMap({ subjectName, progress, onSelectLevel, grade = 1 }: Le
     { id: 10, title: "Level 10: Diagram Batang & Tabel Data" },
   ];
 
-  const levels = grade === 3 ? grade3Levels : grade === 2 ? grade2Levels : grade1Levels;
+  const grade4Levels = [
+    { id: 1, title: "Level 1: Bilangan Besar s.d 999.999" },
+    { id: 2, title: "Level 2: Pecahan Senilai, Desimal, %" },
+    { id: 3, title: "Level 3: Faktor, Kelipatan, Prima" },
+    { id: 4, title: "Level 4: Penentuan FPB dan KPK" },
+    { id: 5, title: "Level 5: Pembulatan & Penaksiran" },
+    { id: 6, title: "Level 6: Operasi Hitung Campuran" },
+    { id: 7, title: "Level 7: Pecahan Beda Penyebut" },
+    { id: 8, title: "Level 8: Keliling & Luas Rumus Baku" },
+    { id: 9, title: "Level 9: Garis & Sudut Busur Derajat" },
+    { id: 10, title: "Level 10: Diagram Batang & Tabel Data" },
+  ];
+
+  const grade5Levels = [
+    { id: 1, title: "Level 1: Penjumlahan & Pengurangan Pecahan" },
+    { id: 2, title: "Level 2: Perkalian & Pembagian Pecahan" },
+    { id: 3, title: "Level 3: Operasi Hitung Desimal & Persen" },
+    { id: 4, title: "Level 4: Perbandingan Senilai & Besaran" },
+    { id: 5, title: "Level 5: Perhitungan Skala Peta & Denah" },
+    { id: 6, title: "Level 6: Hubungan Jarak, Waktu, Kecepatan" },
+    { id: 7, title: "Level 7: Volume, Waktu, & Debit Air" },
+    { id: 8, title: "Level 8: Jaring-Jaring Kubus & Balok" },
+    { id: 9, title: "Level 9: Menghitung Volume Kubus & Balok" },
+    { id: 10, title: "Level 10: Diagram Garis & Tabel Frekuensi" },
+  ];
+
+  const grade6Levels = [
+    { id: 1, title: "Level 1: Mengenal Bilangan Bulat Negatif" },
+    { id: 2, title: "Level 2: Penjumlahan & Pengurangan Bil. Bulat" },
+    { id: 3, title: "Level 3: Perkalian & Pembagian Bil. Bulat" },
+    { id: 4, title: "Level 4: Campuran Pecahan, Desimal, %" },
+    { id: 5, title: "Level 5: Unsur-Unsur Lingkaran" },
+    { id: 6, title: "Level 6: Keliling Lingkaran" },
+    { id: 7, title: "Level 7: Luas Lingkaran" },
+    { id: 8, title: "Level 8: Prisma, Limas, & Tabung" },
+    { id: 9, title: "Level 9: Bangun Ruang Kerucut & Bola" },
+    { id: 10, title: "Level 10: Statistika: Mean, Median, Modus" },
+  ];
+
+  const isIndo = subjectName.toLowerCase().includes("indonesia");
+
+  const indoGrade1Levels = [
+    { id: 1, title: "Level 1: Mengenal Huruf & Bunyi" },
+    { id: 2, title: "Level 2: Membaca & Menulis Permulaan" },
+    { id: 3, title: "Level 3: Perkenalan Diri & Lingkungan" },
+    { id: 4, title: "Level 4: Kalimat Sederhana" },
+    { id: 5, title: "Level 5: Mendengarkan Dongeng & Cerita" },
+    { id: 6, title: "Level 6: Ungkapan Sopan Sehari-hari" },
+  ];
+
+  const indoGrade2Levels = [
+    { id: 1, title: "Level 1: Tanda Baca & Ejaan" },
+    { id: 2, title: "Level 2: Kosakata Lingkungan & Kegiatan" },
+    { id: 3, title: "Level 3: Kalimat Berpola (S-P-O)" },
+    { id: 4, title: "Level 4: Jenis-Jenis Kalimat" },
+    { id: 5, title: "Level 5: Menulis Tegak Bersambung" },
+    { id: 6, title: "Level 6: Puisi Anak & Deklamasi" },
+    { id: 7, title: "Level 7: Teks Narasi Pendek (5W1H)" },
+  ];
+
+  const indoGrade3Levels = [
+    { id: 1, title: "Level 1: Ide Pokok Paragraf Sederhana" },
+    { id: 2, title: "Level 2: Teks Petunjuk & Arahan" },
+    { id: 3, title: "Level 3: Dongeng & Cerita Rakyat" },
+    { id: 4, title: "Level 4: Wawancara Sederhana" },
+    { id: 5, title: "Level 5: Membaca Intensif & Ekstensif" },
+    { id: 6, title: "Level 6: Puisi & Ungkapan Perasaan" },
+  ];
+
+  const indoGrade4Levels = [
+    { id: 1, title: "Level 1: Gagasan Pokok & Pendukung" },
+    { id: 2, title: "Level 2: Struktur Teks Petunjuk/Prosedur" },
+    { id: 3, title: "Level 3: Wawancara Lanjutan & Laporan" },
+    { id: 4, title: "Level 4: Majas & Bahasa Kiasan Dasar" },
+    { id: 5, title: "Level 5: Fabel & Unsur Intrinsik Cerita" },
+    { id: 6, title: "Level 6: Bagian Surat Pribadi" },
+    { id: 7, title: "Level 7: Kamus & Tesaurus (KBBI)" },
+  ];
+
+  const indoGrade5Levels = [
+    { id: 1, title: "Level 1: Kalimat Efektif & Ejaan (EYD)" },
+    { id: 2, title: "Level 2: Teks Eksplanasi Fenomena" },
+    { id: 3, title: "Level 3: Bahasa Iklan & Slogan Persuasif" },
+    { id: 4, title: "Level 4: Teks Narasi Sejarah Bangsa" },
+    { id: 5, title: "Level 5: Membuat Ringkasan & Ikhtisar" },
+    { id: 6, title: "Level 6: Pantun & Sastra Tradisional" },
+  ];
+
+  const indoGrade6Levels = [
+    { id: 1, title: "Level 1: Teks Laporan Hasil Pengamatan" },
+    { id: 2, title: "Level 2: Struktur & Naskah Pidato Persuasif" },
+    { id: 3, title: "Level 3: Pengisian Formulir & Dokumen Resmi" },
+    { id: 4, title: "Level 4: Teks Eksplanasi & Teks Berita" },
+    { id: 5, title: "Level 5: Cerita Fiksi vs Nonfiksi & Resensi" },
+    { id: 6, title: "Level 6: Menulis Karangan Narasi & Deskripsi" },
+  ];
+
+  const mathLevels = grade === 6 ? grade6Levels : grade === 5 ? grade5Levels : grade === 4 ? grade4Levels : grade === 3 ? grade3Levels : grade === 2 ? grade2Levels : grade1Levels;
+  const indoLevels = grade === 6 ? indoGrade6Levels : grade === 5 ? indoGrade5Levels : grade === 4 ? indoGrade4Levels : grade === 3 ? indoGrade3Levels : grade === 2 ? indoGrade2Levels : indoGrade1Levels;
+  const levels = isIndo ? indoLevels : mathLevels;
 
   return (
     <div className="w-full flex flex-col items-center justify-center p-2 md:p-6 relative">
@@ -58,7 +157,7 @@ export function LevelMap({ subjectName, progress, onSelectLevel, grade = 1 }: Le
       {/* Map Header Title Banner */}
       <div className="text-center mb-8 max-w-2xl">
         <span className="px-5 py-2 bg-[#C3631D] text-[#FFDF59] font-black text-sm md:text-base rounded-2xl tracking-wider uppercase shadow-[4px_4px_0px_0px_#3C632A] border-4 border-[#3C632A] inline-block mb-3">
-          PETA PETUALANGAN BELAJAR (10 LEVEL)
+          PETA PETUALANGAN BELAJAR ({levels.length} LEVEL)
         </span>
         <h2 className="text-3xl md:text-5xl font-black text-[#3C632A] drop-shadow-sm">
           {subjectName}
@@ -74,7 +173,7 @@ export function LevelMap({ subjectName, progress, onSelectLevel, grade = 1 }: Le
           const isCompleted = progress.completedLevels.includes(lvl.id);
           const isUnlocked = lvl.id === 1 || progress.completedLevels.includes(lvl.id - 1);
           const isCurrent = isUnlocked && !isCompleted;
-          const isHardLevel = lvl.id >= 6;
+          const isHardLevel = lvl.id > Math.ceil(levels.length / 2);
 
           return (
             <button

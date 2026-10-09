@@ -18,7 +18,7 @@ const FINGER_JOINTS: { [key: string]: number[] } = {
 };
 
 const SIBI_DICTIONARY = [
-  "biologi", "matematika", "belajar", "dashboard", 
+  "ipas", "matematika", "belajar", "dashboard", 
   "tugas", "profil", "kelas", "lanjut", "kembali", "tutup", "saya", "halo"
 ];
 

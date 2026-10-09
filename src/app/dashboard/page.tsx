@@ -68,6 +68,7 @@ interface Subject {
   id: string;
   name: string;
   image?: string;
+  icon?: string;
   category: string;
   description: string;
 }
@@ -130,8 +131,8 @@ export default function DashboardPage() {
 
   // Guru Form 1: Generate / Connect Room
   const [newRoomCode, setNewRoomCode] = useState<string>("INKLU-1234");
-  const [newClassName, setNewClassName] = useState<string>("Kelas Inklusif XI-A");
-  const [newSubject, setNewSubject] = useState<string>("Biologi");
+  const [newClassName, setNewClassName] = useState<string>("Kelas Inklusif 4-A");
+  const [newSubject, setNewSubject] = useState<string>("IPAS");
   const [newTeacherName, setNewTeacherName] = useState<string>("Bu Sarah, S.Pd.");
 
   // Guru Form 2: Upload Materi (Dokumen File & Dynamic Flashcards)
@@ -931,7 +932,7 @@ export default function DashboardPage() {
 
     // Pemicu Suara Otomatis saat Masuk ke Halaman Utama PINTARA
     const dashboardInstruction =
-      "Kamu sekarang ada di halaman utama PINTARA, di sini terdapat katalog mata pelajaran, belajar di kelas, dan akses untuk guru. Di katalog mapel, terdapat berbagai mata pelajaran yang biasa kamu dapatkan di sekolah seperti fisika, matematika, dan lain-lain. Belajar di kelas, kamu dapat berbagi materi dan latihan soal dengan guru dan rekan kamu yang menggunakan PINTARA. Akses untuk guru hanya dikhususkan untuk guru. Silakan melanjutkan belajar, semoga nyaman menggunakan PINTARA.";
+      "Kamu sekarang ada di halaman utama PINTARA, di sini terdapat katalog mata pelajaran SD Kurikulum Merdeka, belajar di kelas, dan akses untuk guru. Di katalog mapel, terdapat berbagai mata pelajaran yang biasa kamu dapatkan di sekolah seperti matematika, bahasa indonesia, IPAS, dan lain-lain. Belajar di kelas, kamu dapat berbagi materi dan latihan soal dengan guru dan rekan kamu yang menggunakan PINTARA. Akses untuk guru hanya dikhususkan untuk guru. Silakan melanjutkan belajar, semoga nyaman menggunakan PINTARA.";
 
     speakGlobal(dashboardInstruction);
   }, []);
@@ -1134,90 +1135,113 @@ export default function DashboardPage() {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const subjects: Subject[] = [
+  // Menentukan angka kelas aktif (1 sampai 6) dari selectedGrade atau userSession.jenjang
+  const activeGradeNum = (() => {
+    const raw = selectedGrade || userSession?.jenjang || "";
+    const match = raw.match(/\d+/);
+    if (match) return parseInt(match[0], 10);
+    return 1; // Default ke Kelas 1 SD jika belum ada pilihan
+  })();
+
+  const isFaseAB = activeGradeNum <= 3; // Kelas 1 – 3 (Fase A & Fase B Awal)
+
+  // Mata Pelajaran Kelas 1 – 3 (Fase A & Fase B Awal)
+  const subjectsGrade1to3: Subject[] = [
     {
-      id: "matematika",
-      name: "Matematika",
-      image: "/logos/matematika.png",
-      category: "Saintek",
-      description: "Aljabar, Geometri, Kalkulus & Logika",
+      id: "pancasila",
+      name: "Pendidikan Pancasila",
+      image: "/logos/pkn.png",
+      icon: "🇮🇩",
+      category: "Karakter",
+      description: "Fondasi Karakter, Nilai Pancasila, Norma & Kewarganegaraan",
     },
     {
       id: "indonesia",
       name: "Bahasa Indonesia",
       image: "/logos/indonesia.png",
-      category: "Umum",
-      description: "Literasi, Tata Bahasa & Karya Tulis",
+      icon: "📖",
+      category: "Literasi",
+      description: "Kemampuan Membaca, Menulis, Menyimak & Berbicara",
+    },
+    {
+      id: "matematika",
+      name: "Matematika",
+      image: "/logos/matematika.png",
+      icon: "🧮",
+      category: "Numerasi",
+      description: "Bilangan Cacah, Berhitung, Geometri Dasar & Pengukuran",
+    },
+    {
+      id: "seni-budaya",
+      name: "Seni dan Budaya",
+      image: "/logos/seni-budaya.png",
+      icon: "🎨",
+      category: "Kreativitas",
+      description: "Seni Rupa, Seni Musik, Seni Teater & Seni Tari",
     },
     {
       id: "inggris",
       name: "Bahasa Inggris",
       image: "/logos/inggris.png",
-      category: "Umum",
-      description: "Grammar, Reading & Conversation",
-    },
-    {
-      id: "biologi",
-      name: "Biologi",
-      image: "/logos/biologi.png",
-      category: "Saintek",
-      description: "Anatomi, Ekosistem, Genetika & Sel",
-    },
-    {
-      id: "kimia",
-      name: "Kimia",
-      image: "/logos/kimia.png",
-      category: "Saintek",
-      description: "Reaksi, Stokiometri & Tabel Periodik",
-    },
-    {
-      id: "fisika",
-      name: "Fisika",
-      image: "/logos/fisika.png",
-      category: "Saintek",
-      description: "Mekanika, Termodinamika & Listrik",
-    },
-    {
-      id: "ekonomi",
-      name: "Ekonomi",
-      image: "/logos/ekonomi.png",
-      category: "Soshum",
-      description: "Akuntansi, Mikro/Makro & Pasar",
-    },
-    {
-      id: "sosiologi",
-      name: "Sosiologi",
-      image: "/logos/sosiologi.png",
-      category: "Soshum",
-      description: "Interaksi Sosial & Struktur Masyarakat",
-    },
-    {
-      id: "geografi",
-      name: "Geografi",
-      image: "/logos/geografi.png",
-      category: "Soshum",
-      description: "Peta, Litosfer, Atmosfer & Demografi",
-    },
-    {
-      id: "sejarah",
-      name: "Sejarah",
-      image: "/logos/sejarah.png",
-      category: "Soshum",
-      description: "Sejarah Indonesia & Peradaban Dunia",
-    },
-    {
-      id: "pkn",
-      name: "Pendidikan Pancasila (PKN)",
-      category: "Umum",
-      description: "Pancasila, UUD 1945 & Kewarganegaraan",
-    },
-    {
-      id: "cerdas-memilih",
-      name: "Yuk, Cerdas Memilih!",
-      category: "Spesial",
-      description: "Panduan Memilih Jurusan & Karir",
+      icon: "🌐",
+      category: "Bahasa",
+      description: "Basic Vocabulary, Phonics, Greetings & Everyday English",
     },
   ];
+
+  // Mata Pelajaran Kelas 4 – 6 (Fase B Akhir & Fase C)
+  const subjectsGrade4to6: Subject[] = [
+    {
+      id: "pancasila",
+      name: "Pendidikan Pancasila",
+      image: "/logos/pkn.png",
+      icon: "🇮🇩",
+      category: "Karakter",
+      description: "Hak & Kewajiban, Keberagaman Budaya, Demokrasi & Gotong Royong",
+    },
+    {
+      id: "indonesia",
+      name: "Bahasa Indonesia",
+      image: "/logos/indonesia.png",
+      icon: "📖",
+      category: "Literasi",
+      description: "Literasi Kritis, Menulis Paragraf, Teks Cerita & Tata Bahasa",
+    },
+    {
+      id: "matematika",
+      name: "Matematika",
+      image: "/logos/matematika.png",
+      icon: "🧮",
+      category: "Numerasi",
+      description: "Pecahan, FPB/KPK, Geometri Ruang, Skala & Pengolahan Data",
+    },
+    {
+      id: "ipas",
+      name: "Ilmu Pengetahuan Alam dan Sosial (IPAS)",
+      image: "/logos/ipas.png",
+      icon: "🔬",
+      category: "Eksplorasi",
+      description: "Sains Alam, Ekosistem, Tubuh Manusia, Lingkungan & Sosial Budaya",
+    },
+    {
+      id: "seni-budaya",
+      name: "Seni dan Budaya",
+      image: "/logos/seni-budaya.png",
+      icon: "🎨",
+      category: "Kreativitas",
+      description: "Seni Rupa, Seni Musik, Seni Teater & Seni Tari",
+    },
+    {
+      id: "inggris",
+      name: "Bahasa Inggris",
+      image: "/logos/inggris.png",
+      icon: "🌐",
+      category: "Bahasa",
+      description: "Grammar, Reading Comprehension, Conversation & Writing",
+    },
+  ];
+
+  const subjects = isFaseAB ? subjectsGrade1to3 : subjectsGrade4to6;
 
   const filteredSubjects = subjects.filter((subj) => {
     const matchesSearch = subj.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1449,11 +1473,19 @@ export default function DashboardPage() {
             <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-teal-100/40 via-cyan-50/20 to-transparent rounded-full blur-3xl pointer-events-none" />
 
             <div className="relative z-10 max-w-2xl">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <span className="px-3.5 py-1 bg-[#FFDF59] text-[#3C632A] font-black text-xs md:text-sm rounded-xl border-2 border-[#3C632A] uppercase tracking-wider shadow-sm">
+                  {isFaseAB ? "Kelas 1 - 3 SD" : "Kelas 4 - 6 SD"}
+                </span>
+                <span className="px-3 py-1 bg-[#7FD13B] text-white font-black text-xs md:text-sm rounded-xl border-2 border-[#3C632A] shadow-sm">
+                  {selectedGrade || (userSession?.jenjang ? userSession.jenjang : `Kelas ${activeGradeNum} SD`)}
+                </span>
+              </div>
               <h1 className="text-3xl md:text-5xl font-black text-[#FFDF59] tracking-tight">
                 Pilih Petualanganmu
               </h1>
               <p className="text-white text-lg mt-2 font-bold">
-                Pilih petualangan yang ingin kamu mulai.
+                Mata pelajaran Kurikulum Merdeka Sekolah Dasar (SD).
               </p>
             </div>
 
@@ -1476,19 +1508,52 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* Switcher Jenjang Kelas SD */}
+          <div className="flex items-center space-x-2 overflow-x-auto pb-3 mb-4 scrollbar-none flex-wrap gap-2">
+            <span className="text-xs md:text-sm font-black text-[#3C632A] uppercase mr-1 shrink-0 bg-white/70 px-3 py-1.5 rounded-xl border-2 border-[#3C632A]">
+              Pilih Kelas:
+            </span>
+            {[1, 2, 3, 4, 5, 6].map((gr) => {
+              const isActive = activeGradeNum === gr;
+              return (
+                <button
+                  key={gr}
+                  type="button"
+                  onClick={() => {
+                    const newGrade = `Kelas ${gr} SD`;
+                    setSelectedGrade(newGrade);
+                    if (userSession) {
+                      const updated = { ...userSession, jenjang: newGrade };
+                      setUserSession(updated);
+                      setActiveSession(updated);
+                    }
+                    speakText(`Beralih ke mata pelajaran Kelas ${gr} SD`);
+                  }}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs md:text-sm font-black transition-all border-2 border-[#3C632A] cursor-pointer shadow-[3px_3px_0px_0px_#3C632A] ${
+                    isActive
+                      ? "bg-[#7FD13B] text-white scale-105 shadow-[4px_4px_0px_0px_#3C632A]"
+                      : "bg-white text-[#3C632A] hover:bg-[#FFE296]"
+                  }`}
+                >
+                  Kelas {gr} SD
+                </button>
+              );
+            })}
+          </div>
+
           {/* Category Filter Pills */}
-          <div className="flex items-center space-x-2 overflow-x-auto pb-4 mb-6 scrollbar-none pl-6 md:pl-8">
-            {["semua", "Saintek", "Soshum", "Umum", "Spesial"].map((cat) => (
+          <div className="flex items-center space-x-2 overflow-x-auto pb-4 mb-6 scrollbar-none pl-1">
+            {["semua", ...Array.from(new Set(subjects.map((s) => s.category)))].map((cat) => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
-                className={`px-4 py-2 rounded-xl text-xs md:text-sm font-bold capitalize whitespace-nowrap transition-all ${
+                className={`px-4 py-2 rounded-xl text-xs md:text-sm font-bold capitalize whitespace-nowrap transition-all cursor-pointer ${
                   activeCategory === cat
                     ? "bg-slate-900 text-white shadow-sm"
                     : "bg-white border border-slate-200 text-[#3C632A] hover:border-slate-300 hover:bg-slate-50"
                 }`}
               >
-                {cat === "semua" ? "Semua Petualangan" : cat}
+                {cat === "semua" ? "Semua Mata Pelajaran" : cat}
               </button>
             ))}
           </div>
@@ -1499,26 +1564,34 @@ export default function DashboardPage() {
               <button
                 key={subj.id}
                 onClick={() => {
-                  const jenjangParam = userSession?.jenjang ? `?kelas=${encodeURIComponent(userSession.jenjang)}` : "";
+                  const jenjangParam = `?kelas=${encodeURIComponent(selectedGrade || (userSession?.jenjang ? userSession.jenjang : `Kelas ${activeGradeNum} SD`))}`;
                   router.push(`/materi/${subj.id}${jenjangParam}`);
                 }}
                 data-voice-command={`buka ${subj.name.toLowerCase()}`}
                 className="group bg-white/40 backdrop-blur-md border-4 border-[#3C632A] hover:border-[#73B14C] rounded-[32px] p-5 flex flex-col justify-between text-center transition-all duration-300 cursor-pointer shadow-[8px_8px_0px_0px_#3C632A] hover:shadow-[8px_8px_0px_0px_#73B14C] transform hover:-translate-y-1.5 h-[340px] md:h-[370px]"
               >
                 <div className="flex flex-col items-center flex-1">
-                  <div className="w-full h-36 md:h-44 mb-4 flex items-center justify-center p-2 shrink-0">
+                  <div className="w-full h-36 md:h-44 mb-4 flex items-center justify-center p-2 shrink-0 relative">
                     {subj.image ? (
                       <img
                         src={subj.image}
                         alt={`Logo ${subj.name}`}
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          target.style.display = "none";
+                          const fallback = target.nextElementSibling as HTMLElement;
+                          if (fallback) fallback.style.display = "flex";
+                        }}
                         className="w-full h-full object-contain object-center transform transition-transform duration-500 group-hover:scale-105"
                       />
-                    ) : (
-                      <div className="w-full h-full rounded-xl flex flex-col items-center justify-center text-[#5D3A1A] p-4 text-center">
-                        <PintaraLogo size="lg" />
-                        <span className="text-xs font-black mt-2 tracking-wide uppercase text-[#5D3A1A]/80">PINTARA</span>
-                      </div>
-                    )}
+                    ) : null}
+                    <div
+                      style={{ display: subj.image ? "none" : "flex" }}
+                      className="w-full h-full rounded-[24px] bg-white/70 border-2 border-[#3C632A] flex flex-col items-center justify-center text-[#5D3A1A] p-4 text-center shadow-inner"
+                    >
+                      <span className="text-5xl md:text-6xl mb-2 drop-shadow-sm">{subj.icon || "📚"}</span>
+                      <span className="text-xs font-black uppercase text-[#3C632A] tracking-wider line-clamp-1">{subj.name}</span>
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-center mb-2">
@@ -2816,7 +2889,7 @@ export default function DashboardPage() {
                       required
                       value={examTitleInput}
                       onChange={(e) => setExamTitleInput(e.target.value)}
-                      placeholder="Contoh: Ujian Akhir Semester Biologi Sel & Metabolisme"
+                      placeholder="Contoh: Ujian Akhir Semester IPAS Bab 1: Tumbuhan & Lingkungan"
                       className="w-full p-4 rounded-xl border-2 border-slate-200 focus:border-[#73B14C] focus:outline-hidden text-base md:text-lg font-bold text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.05)]"
                     />
                   </div>
@@ -3100,7 +3173,7 @@ export default function DashboardPage() {
                       required
                       value={newClassName}
                       onChange={(e) => setNewClassName(e.target.value)}
-                      placeholder="Contoh: Kelas Biologi XI-A"
+                      placeholder="Contoh: Kelas 4-A IPAS"
                       className="w-full p-3.5 rounded-xl border-2 border-slate-200 focus:border-[#73B14C] focus:outline-hidden text-sm font-bold text-slate-900"
                     />
                   </div>
@@ -3112,7 +3185,7 @@ export default function DashboardPage() {
                         type="text"
                         value={newSubject}
                         onChange={(e) => setNewSubject(e.target.value)}
-                        placeholder="Biologi"
+                        placeholder="IPAS"
                         className="w-full p-3 rounded-xl border-2 border-slate-200 text-xs font-bold"
                       />
                     </div>
@@ -3619,8 +3692,8 @@ export default function DashboardPage() {
             </div>
 
             <div className="space-y-4">
-              <p className="font-semibold text-slate-600 mb-4">Jenjang/Role</p>
-              {["Umum", "SD", "Kelas 7", "Kelas 8", "Kelas 9", "Kelas 10", "Kelas 11", "Kelas 12"].map((grade) => (
+              <p className="font-semibold text-slate-600 mb-4">Pilih Kelas Sekolah Dasar (SD)</p>
+              {["Kelas 1 SD", "Kelas 2 SD", "Kelas 3 SD", "Kelas 4 SD", "Kelas 5 SD", "Kelas 6 SD"].map((grade) => (
                 <label
                   key={grade}
                   className="flex items-center space-x-3 cursor-pointer group"

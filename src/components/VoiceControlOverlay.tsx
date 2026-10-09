@@ -114,7 +114,7 @@ export function VoiceControlOverlay() {
               <ul className="list-disc list-inside mt-1 space-y-0.5 text-slate-400">
                 <li>"Isi nama dengan Hafiz" / "Masuk"</li>
                 <li>"Mode Sensorik" / "Lanjut"</li>
-                <li>"Buka Biologi" / "Buka Matematika"</li>
+                <li>"Buka IPAS" / "Buka Matematika"</li>
                 <li>"Baca" / "Kembali" / "Stop"</li>
               </ul>
             </div>

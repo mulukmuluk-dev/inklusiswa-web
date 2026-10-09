@@ -219,7 +219,7 @@ export function useVoiceControl(enabled: boolean = false) {
         playEarcon("success");
         setLastExecuted("Bantuan");
         speak(
-          "Perintah suara aktif. Kamu bisa bilang: 'mode sensorik', 'isi nama dengan hafiz', 'masuk', 'buka biologi', 'kembali', atau 'baca'."
+          "Perintah suara aktif. Kamu bisa bilang: 'mode sensorik', 'isi nama dengan hafiz', 'masuk', 'buka ipas', 'kembali', atau 'baca'."
         );
         return;
       }
@@ -440,16 +440,15 @@ export function useVoiceControl(enabled: boolean = false) {
       const mapelList: Record<string, string> = {
         matematika: "matematika",
         indonesia: "indonesia",
+        "bahasa indonesia": "indonesia",
         inggris: "inggris",
-        biologi: "biologi",
-        kimia: "kimia",
-        fisika: "fisika",
-        ekonomi: "ekonomi",
-        sosiologi: "sosiologi",
-        geografi: "geografi",
-        sejarah: "sejarah",
-        pkn: "pkn",
-        "cerdas memilih": "cerdas-memilih",
+        "bahasa inggris": "inggris",
+        pancasila: "pancasila",
+        pkn: "pancasila",
+        "pendidikan pancasila": "pancasila",
+        "seni budaya": "seni-budaya",
+        "seni dan budaya": "seni-budaya",
+        ipas: "ipas",
       };
 
       for (const [keyName, routeId] of Object.entries(mapelList)) {

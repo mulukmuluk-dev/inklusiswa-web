@@ -6,6 +6,15 @@ import { LevelMap } from "./LevelMap";
 import { MathGrade1Game } from "./subjects/MathGrade1Game";
 import { MathGrade2Game } from "./subjects/MathGrade2Game";
 import { MathGrade3Game } from "./subjects/MathGrade3Game";
+import { MathGrade4Game } from "./subjects/MathGrade4Game";
+import { MathGrade5Game } from "./subjects/MathGrade5Game";
+import { MathGrade6Game } from "./subjects/MathGrade6Game";
+import { IndoGrade1Game } from "./subjects/IndoGrade1Game";
+import { IndoGrade2Game } from "./subjects/IndoGrade2Game";
+import { IndoGrade3Game } from "./subjects/IndoGrade3Game";
+import { IndoGrade4Game } from "./subjects/IndoGrade4Game";
+import { IndoGrade5Game } from "./subjects/IndoGrade5Game";
+import { IndoGrade6Game } from "./subjects/IndoGrade6Game";
 import { getActiveSession } from "@/lib/authSession";
 import { isTtsMuted, toggleGlobalTts, speakGlobal } from "@/lib/soundControl";
 
@@ -67,9 +76,20 @@ export function GameEngineStage({
     setShowRewardModal(true);
   };
 
+  const isIndo = subjectId === "indonesia" || subjectId === "bahasa-indonesia";
+
+  const getMaxLevels = () => {
+    if (isIndo) {
+      if (selectedGrade === 2 || selectedGrade === 4) return 7;
+      return 6;
+    }
+    return 10;
+  };
+
   const handleNextLevelOrMap = () => {
     setShowRewardModal(false);
-    if (activeLevel && activeLevel < 10) {
+    const maxLvl = getMaxLevels();
+    if (activeLevel && activeLevel < maxLvl) {
       setActiveLevel(activeLevel + 1);
     } else {
       setActiveLevel(null); // Back to map
@@ -114,9 +134,9 @@ export function GameEngineStage({
             </h1>
             
             {/* Grade Switcher */}
-            {(subjectId === "matematika" || subjectId === "math") && (
+            {(subjectId === "matematika" || subjectId === "math" || isIndo) && (
               <div className="flex items-center space-x-2 bg-black/10 p-1 rounded-2xl border border-white/20">
-                {[1, 2, 3].map((gr) => (
+                {[1, 2, 3, 4, 5, 6].map((gr) => (
                   <button
                     key={gr}
                     type="button"
@@ -169,7 +189,25 @@ export function GameEngineStage({
           ) : (
             <div className="w-full flex flex-col items-center justify-center">
               {subjectId === "matematika" || subjectId === "math" ? (
-                selectedGrade === 3 ? (
+                selectedGrade === 6 ? (
+                  <MathGrade6Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                ) : selectedGrade === 5 ? (
+                  <MathGrade5Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                ) : selectedGrade === 4 ? (
+                  <MathGrade4Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                ) : selectedGrade === 3 ? (
                   <MathGrade3Game
                     levelId={activeLevel}
                     onLevelComplete={handleLevelComplete}
@@ -183,6 +221,44 @@ export function GameEngineStage({
                   />
                 ) : (
                   <MathGrade1Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                )
+              ) : isIndo ? (
+                selectedGrade === 6 ? (
+                  <IndoGrade6Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                ) : selectedGrade === 5 ? (
+                  <IndoGrade5Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                ) : selectedGrade === 4 ? (
+                  <IndoGrade4Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                ) : selectedGrade === 3 ? (
+                  <IndoGrade3Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                ) : selectedGrade === 2 ? (
+                  <IndoGrade2Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                ) : (
+                  <IndoGrade1Game
                     levelId={activeLevel}
                     onLevelComplete={handleLevelComplete}
                     accessibilityMode={activeAccessibilityMode}
@@ -232,7 +308,7 @@ export function GameEngineStage({
               onClick={handleNextLevelOrMap}
               className="w-full py-4 bg-[#7FD13B] hover:bg-[#6EB832] border-4 border-[#3C632A] text-white font-black text-xl rounded-[24px] shadow-[4px_4px_0px_0px_#3C632A] hover:scale-105 active:scale-95 transition-all"
             >
-              {activeLevel && activeLevel < 10 ? "Lanjut Level Berikutnya" : "Kembali ke Peta Level"}
+              {activeLevel && activeLevel < getMaxLevels() ? "Lanjut Level Berikutnya" : "Kembali ke Peta Level"}
             </button>
           </div>
         </div>
