@@ -90,6 +90,10 @@ export function LevelMap({ subjectName, progress, onSelectLevel, grade = 1 }: Le
   ];
 
   const isIndo = subjectName.toLowerCase().includes("indonesia");
+  const isEnglish = subjectName.toLowerCase().includes("inggris") || subjectName.toLowerCase().includes("english");
+  const isIpas = subjectName.toLowerCase().includes("ipas") || subjectName.toLowerCase().includes("ilmu pengetahuan alam") || subjectName.toLowerCase().includes("alam dan sosial");
+  const isPancasila = subjectName.toLowerCase().includes("pancasila") || subjectName.toLowerCase().includes("pkn");
+  const isSeni = subjectName.toLowerCase().includes("seni") || subjectName.toLowerCase().includes("budaya") || subjectName.toLowerCase().includes("sbk");
 
   const indoGrade1Levels = [
     { id: 1, title: "Level 1: Mengenal Huruf & Bunyi" },
@@ -147,9 +151,189 @@ export function LevelMap({ subjectName, progress, onSelectLevel, grade = 1 }: Le
     { id: 6, title: "Level 6: Menulis Karangan Narasi & Deskripsi" },
   ];
 
+  const englishGrade1Levels = [
+    { id: 1, title: "Level 1: Greetings & Introductions" },
+    { id: 2, title: "Level 2: The Alphabet & Phonics" },
+    { id: 3, title: "Level 3: Numbers (1–10 / 20)" },
+    { id: 4, title: "Level 4: Colors & Shapes" },
+    { id: 5, title: "Level 5: Classroom Objects" },
+    { id: 6, title: "Level 6: My Body" },
+    { id: 7, title: "Level 7: Family Members" },
+  ];
+
+  const englishGrade2Levels = [
+    { id: 1, title: "Level 1: Numbers (21–50 / 100)" },
+    { id: 2, title: "Level 2: Animals (Pets & Wild Animals)" },
+    { id: 3, title: "Level 3: Parts of the House & Furniture" },
+    { id: 4, title: "Level 4: Food & Drinks (Likes / Dislikes)" },
+    { id: 5, title: "Level 5: Clothes & Accessories" },
+    { id: 6, title: "Level 6: Simple Action Verbs" },
+    { id: 7, title: "Level 7: Basic Demonstratives (This/That)" },
+  ];
+
+  const englishGrade3Levels = [
+    { id: 1, title: "Level 1: Time & Daily Routines" },
+    { id: 2, title: "Level 2: Days and Months" },
+    { id: 3, title: "Level 3: Weather & Seasons" },
+    { id: 4, title: "Level 4: Hobbies & Free Time" },
+    { id: 5, title: "Level 5: Basic Prepositions of Place" },
+    { id: 6, title: "Level 6: Expressing Possession (Have/Has)" },
+    { id: 7, title: "Level 7: Basic Feelings & Emotions" },
+  ];
+
+  const englishGrade4Levels = [
+    { id: 1, title: "Level 1: Simple Present Tense (Do/Does)" },
+    { id: 2, title: "Level 2: Telling the Time (Detailed)" },
+    { id: 3, title: "Level 3: School Subjects & Schedules" },
+    { id: 4, title: "Level 4: Professions & Workplaces" },
+    { id: 5, title: "Level 5: Places in Town & Basic Directions" },
+    { id: 6, title: "Level 6: Expressing Likes & Dislikes" },
+    { id: 7, title: "Level 7: Quantifiers (Some, Any, Much, Many)" },
+  ];
+
+  const englishGrade5Levels = [
+    { id: 1, title: "Level 1: Present Continuous Tense" },
+    { id: 2, title: "Level 2: Adjectives & Degrees of Comparison" },
+    { id: 3, title: "Level 3: Health & Illnesses" },
+    { id: 4, title: "Level 4: Food, Taste, & Ordering" },
+    { id: 5, title: "Level 5: Public Transportation & Travel" },
+    { id: 6, title: "Level 6: Simple Procedure Text & Imperatives" },
+  ];
+
+  const englishGrade6Levels = [
+    { id: 1, title: "Level 1: Simple Past Tense (Past Verbs)" },
+    { id: 2, title: "Level 2: Future Tense & Plans (Will/Going to)" },
+    { id: 3, title: "Level 3: Advanced Direction & Map Reading" },
+    { id: 4, title: "Level 4: Earth, Space, & Environment Care" },
+    { id: 5, title: "Level 5: Descriptive Text & Structures" },
+    { id: 6, title: "Level 6: Recount Text & Past Experiences" },
+  ];
+
+  const ipasGrade4Levels = [
+    { id: 1, title: "Level 1: Bagian Tubuh Tumbuhan & Fungsinya" },
+    { id: 2, title: "Level 2: Wujud Zat & Perubahannya" },
+    { id: 3, title: "Level 3: Gaya di Sekitar Kita" },
+    { id: 4, title: "Level 4: Transformasi Energi" },
+    { id: 5, title: "Level 5: Cerita tentang Daerahku" },
+    { id: 6, title: "Level 6: Keragaman Budaya & Kearifan Lokal" },
+    { id: 7, title: "Level 7: Kegiatan Ekonomi & Kebutuhan Manusia" },
+    { id: 8, title: "Level 8: Norma & Adat Istiadat" },
+  ];
+
+  const ipasGrade5Levels = [
+    { id: 1, title: "Level 1: Cahaya & Penglihatan" },
+    { id: 2, title: "Level 2: Bunyi & Pendengaran" },
+    { id: 3, title: "Level 3: Ekosistem & Keseimbangan Lingkungan" },
+    { id: 4, title: "Level 4: Magnet, Listrik, & Teknologi" },
+    { id: 5, title: "Level 5: Struktur Bumi & Perubahannya" },
+    { id: 6, title: "Level 6: Warisan Budaya & Sejarah Nusantara" },
+    { id: 7, title: "Level 7: Kondisi Geografis Indonesia" },
+    { id: 8, title: "Level 8: Perekonomian & Sumber Daya Alam" },
+  ];
+
+  const ipasGrade6Levels = [
+    { id: 1, title: "Level 1: Sistem Gerak Manusia" },
+    { id: 2, title: "Level 2: Sistem Organ Tubuh Manusia" },
+    { id: 3, title: "Level 3: Perkembangbiakan Makhluk Hidup" },
+    { id: 4, title: "Level 4: Tata Surya & Alam Semesta" },
+    { id: 5, title: "Level 5: Sejarah Perjuangan Bangsa" },
+    { id: 6, title: "Level 6: Geografi Regional & Global (ASEAN)" },
+    { id: 7, title: "Level 7: Kerja Sama Antarnegara & Globalisasi" },
+    { id: 8, title: "Level 8: Kelestarian Lingkungan & Isu Global" },
+  ];
+
+  const pancasilaGrade1Levels = [
+    { id: 1, title: "Level 1: Aku Cinta Pancasila" },
+    { id: 2, title: "Level 2: Aku Anak yang Patuh Aturan" },
+    { id: 3, title: "Level 3: Kita Berbeda tetapi Sama" },
+    { id: 4, title: "Level 4: Aku Cinta Lingkungan Sekitar" },
+  ];
+
+  const pancasilaGrade2Levels = [
+    { id: 1, title: "Level 1: Pancasila Dasar Negaraku" },
+    { id: 2, title: "Level 2: Menaati Aturan di Sekitarku" },
+    { id: 3, title: "Level 3: Bhinneka Tunggal Ika di Sekolah" },
+    { id: 4, title: "Level 4: Aku Peduli Lingkungan" },
+  ];
+
+  const pancasilaGrade3Levels = [
+    { id: 1, title: "Level 1: Makna Sila-Sila Pancasila" },
+    { id: 2, title: "Level 2: Hak dan Kewajiban" },
+    { id: 3, title: "Level 3: Keragaman Suku & Budaya" },
+    { id: 4, title: "Level 4: Mengenal Wilayah Tempat Tinggal" },
+  ];
+
+  const pancasilaGrade4Levels = [
+    { id: 1, title: "Level 1: Pancasila sebagai Pedoman Hidup" },
+    { id: 2, title: "Level 2: Norma dan Konstitusi" },
+    { id: 3, title: "Level 3: Keberagaman Budaya Indonesia" },
+    { id: 4, title: "Level 4: Negara Kesatuan Republik Indonesia (NKRI)" },
+  ];
+
+  const pancasilaGrade5Levels = [
+    { id: 1, title: "Level 1: Pancasila dalam Kehidupan Berbangsa" },
+    { id: 2, title: "Level 2: Kepatuhan terhadap Norma & Hukum" },
+    { id: 3, title: "Level 3: Menghargai Keragaman Karakteristik Individu" },
+    { id: 4, title: "Level 4: Persatuan dan Kesatuan Bangsa" },
+  ];
+
+  const pancasilaGrade6Levels = [
+    { id: 1, title: "Level 1: Pengamalan Nilai-Nilai Pancasila secara Utuh" },
+    { id: 2, title: "Level 2: Musyawarah dan Demokrasi" },
+    { id: 3, title: "Level 3: Bhinneka Tunggal Ika di Era Terbuka" },
+    { id: 4, title: "Level 4: Kedaulatan & Keutuhan NKRI" },
+  ];
+
+  const seniGrade1Levels = [
+    { id: 1, title: "Level 1: Seni Rupa - Garis, Warna, & Kolase Alam" },
+    { id: 2, title: "Level 2: Seni Musik - Bunyi Alam & Ritme Stabil" },
+    { id: 3, title: "Level 3: Seni Tari - Gerak Tubuh & Meniru Alam" },
+    { id: 4, title: "Level 4: Seni Teater - Mimik Wajah & Pantomim" },
+  ];
+
+  const seniGrade2Levels = [
+    { id: 1, title: "Level 1: Seni Rupa - Warna Sekunder & Cap Cetak" },
+    { id: 2, title: "Level 2: Seni Musik - Solmisasi & Alat Musik Ritmis" },
+    { id: 3, title: "Level 3: Seni Tari - Gerak Maknawi & Aktivitas Harian" },
+    { id: 4, title: "Level 4: Seni Teater - Artikulasi & Emosi Dasar" },
+  ];
+
+  const seniGrade3Levels = [
+    { id: 1, title: "Level 1: Seni Rupa - Gambar Dekoratif & Mozaik" },
+    { id: 2, title: "Level 2: Seni Musik - Notasi Angka, Birama, & Unisono" },
+    { id: 3, title: "Level 3: Seni Tari - Level Gerak, Dinamika, & Pola Lantai" },
+    { id: 4, title: "Level 4: Seni Teater - Dialog Cerita Rakyat & Wayang Kertas" },
+  ];
+
+  const seniGrade4Levels = [
+    { id: 1, title: "Level 1: Seni Rupa - Gambar Perspektif & Kriya Anyaman" },
+    { id: 2, title: "Level 2: Seni Musik - Tangga Nada Diatonis & Pianika" },
+    { id: 3, title: "Level 3: Seni Tari - Tari Kreasi Daerah & Properti Tari" },
+    { id: 4, title: "Level 4: Seni Teater - Karakterisasi Tokoh & Proyeksi Suara" },
+  ];
+
+  const seniGrade5Levels = [
+    { id: 1, title: "Level 1: Seni Rupa - Gambar Ilustrasi & Batik Jumputan" },
+    { id: 2, title: "Level 2: Seni Musik - Tangga Nada Pentatonis & Musik Tradisi" },
+    { id: 3, title: "Level 3: Seni Tari - Tari Kreasi Kepahlawanan & Tata Rias" },
+    { id: 4, title: "Level 4: Seni Teater - Naskah Pengalaman & Blocking Panggung" },
+  ];
+
+  const seniGrade6Levels = [
+    { id: 1, title: "Level 1: Seni Rupa - Poster Persuasif, Arsir, & Seni Patung" },
+    { id: 2, title: "Level 2: Seni Musik - Struktur Lagu & Musik Ansambel" },
+    { id: 3, title: "Level 3: Seni Tari - Tari Kreasi Utuh & Iringan Tradisi" },
+    { id: 4, title: "Level 4: Seni Teater - Manajemen Produksi Pementasan" },
+  ];
+
   const mathLevels = grade === 6 ? grade6Levels : grade === 5 ? grade5Levels : grade === 4 ? grade4Levels : grade === 3 ? grade3Levels : grade === 2 ? grade2Levels : grade1Levels;
   const indoLevels = grade === 6 ? indoGrade6Levels : grade === 5 ? indoGrade5Levels : grade === 4 ? indoGrade4Levels : grade === 3 ? indoGrade3Levels : grade === 2 ? indoGrade2Levels : indoGrade1Levels;
-  const levels = isIndo ? indoLevels : mathLevels;
+  const englishLevels = grade === 6 ? englishGrade6Levels : grade === 5 ? englishGrade5Levels : grade === 4 ? englishGrade4Levels : grade === 3 ? englishGrade3Levels : grade === 2 ? englishGrade2Levels : englishGrade1Levels;
+  const ipasLevels = grade === 6 ? ipasGrade6Levels : grade === 5 ? ipasGrade5Levels : ipasGrade4Levels;
+  const pancasilaLevels = grade === 6 ? pancasilaGrade6Levels : grade === 5 ? pancasilaGrade5Levels : grade === 4 ? pancasilaGrade4Levels : grade === 3 ? pancasilaGrade3Levels : grade === 2 ? pancasilaGrade2Levels : pancasilaGrade1Levels;
+  const seniLevels = grade === 6 ? seniGrade6Levels : grade === 5 ? seniGrade5Levels : grade === 4 ? seniGrade4Levels : grade === 3 ? seniGrade3Levels : grade === 2 ? seniGrade2Levels : seniGrade1Levels;
+
+  const levels = isSeni ? seniLevels : isPancasila ? pancasilaLevels : isIpas ? ipasLevels : isEnglish ? englishLevels : isIndo ? indoLevels : mathLevels;
 
   return (
     <div className="w-full flex flex-col items-center justify-center p-2 md:p-6 relative">

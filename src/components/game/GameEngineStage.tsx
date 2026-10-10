@@ -15,6 +15,27 @@ import { IndoGrade3Game } from "./subjects/IndoGrade3Game";
 import { IndoGrade4Game } from "./subjects/IndoGrade4Game";
 import { IndoGrade5Game } from "./subjects/IndoGrade5Game";
 import { IndoGrade6Game } from "./subjects/IndoGrade6Game";
+import { EnglishGrade1Game } from "./subjects/EnglishGrade1Game";
+import { EnglishGrade2Game } from "./subjects/EnglishGrade2Game";
+import { EnglishGrade3Game } from "./subjects/EnglishGrade3Game";
+import { EnglishGrade4Game } from "./subjects/EnglishGrade4Game";
+import { EnglishGrade5Game } from "./subjects/EnglishGrade5Game";
+import { EnglishGrade6Game } from "./subjects/EnglishGrade6Game";
+import { IpasGrade4Game } from "./subjects/IpasGrade4Game";
+import { IpasGrade5Game } from "./subjects/IpasGrade5Game";
+import { IpasGrade6Game } from "./subjects/IpasGrade6Game";
+import { PancasilaGrade1Game } from "./subjects/PancasilaGrade1Game";
+import { PancasilaGrade2Game } from "./subjects/PancasilaGrade2Game";
+import { PancasilaGrade3Game } from "./subjects/PancasilaGrade3Game";
+import { PancasilaGrade4Game } from "./subjects/PancasilaGrade4Game";
+import { PancasilaGrade5Game } from "./subjects/PancasilaGrade5Game";
+import { PancasilaGrade6Game } from "./subjects/PancasilaGrade6Game";
+import { SeniGrade1Game } from "./subjects/SeniGrade1Game";
+import { SeniGrade2Game } from "./subjects/SeniGrade2Game";
+import { SeniGrade3Game } from "./subjects/SeniGrade3Game";
+import { SeniGrade4Game } from "./subjects/SeniGrade4Game";
+import { SeniGrade5Game } from "./subjects/SeniGrade5Game";
+import { SeniGrade6Game } from "./subjects/SeniGrade6Game";
 import { getActiveSession } from "@/lib/authSession";
 import { isTtsMuted, toggleGlobalTts, speakGlobal } from "@/lib/soundControl";
 
@@ -38,6 +59,7 @@ export function GameEngineStage({
     if (kelasParam && (kelasParam.includes("4") || kelasParam.toLowerCase().includes("kelas 4"))) return 4;
     if (kelasParam && (kelasParam.includes("5") || kelasParam.toLowerCase().includes("kelas 5"))) return 5;
     if (kelasParam && (kelasParam.includes("6") || kelasParam.toLowerCase().includes("kelas 6"))) return 6;
+    if (subjectId === "ipas" || subjectId === "ipa" || subjectId === "ips") return 4;
     return 1;
   });
   const [progress, setProgress] = useState<SubjectProgress>({
@@ -77,8 +99,19 @@ export function GameEngineStage({
   };
 
   const isIndo = subjectId === "indonesia" || subjectId === "bahasa-indonesia";
+  const isEnglish = subjectId === "inggris" || subjectId === "bahasa-inggris" || subjectId === "english";
+  const isIpas = subjectId === "ipas" || subjectId === "ipa" || subjectId === "ips";
+  const isPancasila = subjectId === "pancasila" || subjectId === "pkn" || subjectId === "pendidikan-pancasila";
+  const isSeni = subjectId === "seni-budaya" || subjectId === "seni" || subjectId === "sbk";
 
   const getMaxLevels = () => {
+    if (isSeni) return 4;
+    if (isPancasila) return 4;
+    if (isIpas) return 8;
+    if (isEnglish) {
+      if (selectedGrade === 5 || selectedGrade === 6) return 6;
+      return 7;
+    }
     if (isIndo) {
       if (selectedGrade === 2 || selectedGrade === 4) return 7;
       return 6;
@@ -134,7 +167,27 @@ export function GameEngineStage({
             </h1>
             
             {/* Grade Switcher */}
-            {(subjectId === "matematika" || subjectId === "math" || isIndo) && (
+            {isIpas ? (
+              <div className="flex items-center space-x-2 bg-black/10 p-1 rounded-2xl border border-white/20">
+                {[4, 5, 6].map((gr) => (
+                  <button
+                    key={gr}
+                    type="button"
+                    onClick={() => {
+                      setSelectedGrade(gr);
+                      setActiveLevel(null);
+                    }}
+                    className={`px-3 py-1 font-extrabold text-xs md:text-sm rounded-xl border-2 border-[#3C632A] transition-all cursor-pointer ${
+                      selectedGrade === gr
+                        ? "bg-[#7FD13B] text-white shadow-sm scale-105"
+                        : "bg-white/80 text-[#3C632A] hover:bg-white"
+                    }`}
+                  >
+                    Kelas {gr} SD
+                  </button>
+                ))}
+              </div>
+            ) : (subjectId === "matematika" || subjectId === "math" || isIndo || isEnglish || isPancasila || isSeni) && (
               <div className="flex items-center space-x-2 bg-black/10 p-1 rounded-2xl border border-white/20">
                 {[1, 2, 3, 4, 5, 6].map((gr) => (
                   <button
@@ -259,6 +312,140 @@ export function GameEngineStage({
                   />
                 ) : (
                   <IndoGrade1Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                )
+              ) : isEnglish ? (
+                selectedGrade === 6 ? (
+                  <EnglishGrade6Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                ) : selectedGrade === 5 ? (
+                  <EnglishGrade5Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                ) : selectedGrade === 4 ? (
+                  <EnglishGrade4Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                ) : selectedGrade === 3 ? (
+                  <EnglishGrade3Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                ) : selectedGrade === 2 ? (
+                  <EnglishGrade2Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                ) : (
+                  <EnglishGrade1Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                )
+              ) : isIpas ? (
+                selectedGrade === 6 ? (
+                  <IpasGrade6Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                ) : selectedGrade === 5 ? (
+                  <IpasGrade5Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                ) : (
+                  <IpasGrade4Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                )
+              ) : isPancasila ? (
+                selectedGrade === 6 ? (
+                  <PancasilaGrade6Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                ) : selectedGrade === 5 ? (
+                  <PancasilaGrade5Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                ) : selectedGrade === 4 ? (
+                  <PancasilaGrade4Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                ) : selectedGrade === 3 ? (
+                  <PancasilaGrade3Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                ) : selectedGrade === 2 ? (
+                  <PancasilaGrade2Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                ) : (
+                  <PancasilaGrade1Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                )
+              ) : isSeni ? (
+                selectedGrade === 6 ? (
+                  <SeniGrade6Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                ) : selectedGrade === 5 ? (
+                  <SeniGrade5Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                ) : selectedGrade === 4 ? (
+                  <SeniGrade4Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                ) : selectedGrade === 3 ? (
+                  <SeniGrade3Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                ) : selectedGrade === 2 ? (
+                  <SeniGrade2Game
+                    levelId={activeLevel}
+                    onLevelComplete={handleLevelComplete}
+                    accessibilityMode={activeAccessibilityMode}
+                  />
+                ) : (
+                  <SeniGrade1Game
                     levelId={activeLevel}
                     onLevelComplete={handleLevelComplete}
                     accessibilityMode={activeAccessibilityMode}
