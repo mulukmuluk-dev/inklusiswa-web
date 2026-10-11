@@ -1547,10 +1547,10 @@ export default function DashboardPage() {
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
-                className={`px-4 py-2 rounded-xl text-xs md:text-sm font-bold capitalize whitespace-nowrap transition-all cursor-pointer ${
+                className={`px-4 py-2 rounded-2xl text-xs md:text-sm font-black capitalize whitespace-nowrap transition-all border-2 border-[#3C632A] cursor-pointer ${
                   activeCategory === cat
-                    ? "bg-slate-900 text-white shadow-sm"
-                    : "bg-white border border-slate-200 text-[#3C632A] hover:border-slate-300 hover:bg-slate-50"
+                    ? "bg-[#3C632A] text-[#FFFFDB] shadow-[3px_3px_0px_0px_#5D3A1A]"
+                    : "bg-white text-[#3C632A] hover:bg-[#FFE296] shadow-[2px_2px_0px_0px_#3C632A]"
                 }`}
               >
                 {cat === "semua" ? "Semua Mata Pelajaran" : cat}
@@ -1568,10 +1568,11 @@ export default function DashboardPage() {
                   router.push(`/materi/${subj.id}${jenjangParam}`);
                 }}
                 data-voice-command={`buka ${subj.name.toLowerCase()}`}
-                className="group bg-white/40 backdrop-blur-md border-4 border-[#3C632A] hover:border-[#73B14C] rounded-[32px] p-5 flex flex-col justify-between text-center transition-all duration-300 cursor-pointer shadow-[8px_8px_0px_0px_#3C632A] hover:shadow-[8px_8px_0px_0px_#73B14C] transform hover:-translate-y-1.5 h-[340px] md:h-[370px]"
+                className="group bg-white border-4 border-[#3C632A] hover:border-[#73B14C] rounded-[32px] p-5 md:p-6 flex flex-col justify-between text-center transition-all duration-300 cursor-pointer shadow-[6px_6px_0px_0px_#3C632A] hover:shadow-[10px_10px_0px_0px_#3C632A] transform hover:-translate-y-1.5 h-full min-h-[380px] md:min-h-[410px]"
               >
-                <div className="flex flex-col items-center flex-1">
-                  <div className="w-full h-36 md:h-44 mb-4 flex items-center justify-center p-2 shrink-0 relative">
+                <div className="flex flex-col items-center flex-1 w-full">
+                  {/* Container Ilustrasi Bersih */}
+                  <div className="w-full h-36 md:h-44 mb-4 rounded-2xl bg-gradient-to-b from-[#FFF9E6] to-[#FFF4D0]/60 border-2 border-[#3C632A]/15 flex items-center justify-center p-3 shrink-0 relative overflow-hidden group-hover:border-[#3C632A]/30 transition-all">
                     {subj.image ? (
                       <img
                         src={subj.image}
@@ -1582,37 +1583,57 @@ export default function DashboardPage() {
                           const fallback = target.nextElementSibling as HTMLElement;
                           if (fallback) fallback.style.display = "flex";
                         }}
-                        className="w-full h-full object-contain object-center transform transition-transform duration-500 group-hover:scale-105"
+                        className="w-full h-full max-h-32 md:max-h-36 object-contain object-center transform transition-transform duration-500 group-hover:scale-110 drop-shadow-md"
                       />
                     ) : null}
                     <div
                       style={{ display: subj.image ? "none" : "flex" }}
-                      className="w-full h-full rounded-[24px] bg-white/70 border-2 border-[#3C632A] flex flex-col items-center justify-center text-[#5D3A1A] p-4 text-center shadow-inner"
+                      className="w-full h-full rounded-xl bg-white/80 border border-[#3C632A]/20 flex flex-col items-center justify-center text-[#5D3A1A] p-2 text-center"
                     >
-                      <span className="text-5xl md:text-6xl mb-2 drop-shadow-sm">{subj.icon || "📚"}</span>
-                      <span className="text-xs font-black uppercase text-[#3C632A] tracking-wider line-clamp-1">{subj.name}</span>
+                      <span className="text-5xl md:text-6xl mb-1 drop-shadow-sm">{subj.icon || "📚"}</span>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-center mb-2">
-                    <span className="px-2.5 py-0.5 bg-white/50 border border-white/50 text-[#3C632A] font-extrabold text-[10px] md:text-[11px] rounded-md uppercase tracking-wider">
+                  {/* Badge Kategori */}
+                  <div className="flex items-center justify-center mb-2.5 shrink-0">
+                    <span className={`px-3 py-1 rounded-full text-[10px] md:text-[11px] font-black uppercase tracking-wider border shadow-xs ${
+                      subj.category.toLowerCase() === "karakter"
+                        ? "bg-amber-100 text-amber-800 border-amber-300"
+                        : subj.category.toLowerCase() === "literasi"
+                        ? "bg-blue-100 text-blue-800 border-blue-300"
+                        : subj.category.toLowerCase() === "numerasi"
+                        ? "bg-purple-100 text-purple-800 border-purple-300"
+                        : subj.category.toLowerCase() === "eksplorasi"
+                        ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                        : subj.category.toLowerCase() === "kreativitas"
+                        ? "bg-pink-100 text-pink-800 border-pink-300"
+                        : subj.category.toLowerCase() === "bahasa"
+                        ? "bg-indigo-100 text-indigo-800 border-indigo-300"
+                        : "bg-slate-100 text-slate-800 border-slate-300"
+                    }`}>
                       {subj.category}
                     </span>
                   </div>
 
+                  {/* Nama Mapel */}
                   <h3 className="text-base md:text-lg font-black text-[#1F2937] group-hover:text-[#3C632A] transition-colors line-clamp-1 w-full text-center">
                     {subj.name}
                   </h3>
-                  <p className="text-xs text-[#374151] font-medium mt-1.5 line-clamp-2 leading-relaxed max-w-[90%] text-center">
+
+                  {/* Ringkasan Materi */}
+                  <p className="text-xs text-[#4B5563] font-medium mt-1.5 line-clamp-2 leading-relaxed max-w-[95%] text-center">
                     {subj.description}
                   </p>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-white/40 flex items-center justify-center space-x-1.5 text-xs font-bold text-[#3C632A] group-hover:translate-x-0.5 transition-transform shrink-0">
-                  <span>Mulai Belajar</span>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
+                {/* Tombol Aksi Mulai Belajar */}
+                <div className="mt-5 pt-3.5 border-t-2 border-[#3C632A]/10 w-full shrink-0">
+                  <div className="w-full py-2.5 px-4 bg-[#FFDF59] group-hover:bg-[#7FD13B] text-[#3C632A] group-hover:text-white border-2 border-[#3C632A] rounded-2xl font-black text-xs md:text-sm flex items-center justify-center space-x-2 shadow-[2px_2px_0px_0px_#3C632A] group-hover:shadow-[3px_3px_0px_0px_#3C632A] transition-all">
+                    <span>Mulai Belajar</span>
+                    <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                  </div>
                 </div>
               </button>
             ))}
