@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { getSubjectProgress, saveLevelCompletion, SubjectProgress } from "@/lib/gameProgress";
+import { getSubjectProgress, saveLevelCompletion, loadSubjectProgressWithRemote, SubjectProgress } from "@/lib/gameProgress";
 import { LevelMap } from "./LevelMap";
 import { MathGrade1Game } from "./subjects/MathGrade1Game";
 import { MathGrade2Game } from "./subjects/MathGrade2Game";
@@ -78,6 +78,11 @@ export function GameEngineStage({
     const progressKey = `${subjectId}-k${selectedGrade}`;
     const initialProgress = getSubjectProgress(progressKey);
     setProgress(initialProgress);
+
+    // Sinkronisasi otomatis data progres dari cloud database Supabase
+    loadSubjectProgressWithRemote(progressKey, (remote) => {
+      setProgress(remote);
+    });
 
     // Get session mode
     const session = getActiveSession();
