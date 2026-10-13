@@ -53,12 +53,14 @@ export function GameEngineStage({
   onBackToCatalog,
 }: GameEngineStageProps) {
   const [activeLevel, setActiveLevel] = useState<number | null>(null);
+  const [userSession, setUserSession] = useState(() => getActiveSession());
   const [selectedGrade, setSelectedGrade] = useState<number>(() => {
-    if (kelasParam && (kelasParam.includes("2") || kelasParam.toLowerCase().includes("kelas 2"))) return 2;
-    if (kelasParam && (kelasParam.includes("3") || kelasParam.toLowerCase().includes("kelas 3"))) return 3;
-    if (kelasParam && (kelasParam.includes("4") || kelasParam.toLowerCase().includes("kelas 4"))) return 4;
-    if (kelasParam && (kelasParam.includes("5") || kelasParam.toLowerCase().includes("kelas 5"))) return 5;
-    if (kelasParam && (kelasParam.includes("6") || kelasParam.toLowerCase().includes("kelas 6"))) return 6;
+    const session = getActiveSession();
+    const rawGrade = (session?.role === "siswa" && session?.jenjang)
+      ? session.jenjang
+      : (kelasParam || session?.jenjang || "");
+    const match = rawGrade.match(/\d+/);
+    if (match) return parseInt(match[0], 10);
     if (subjectId === "ipas" || subjectId === "ipa" || subjectId === "ips") return 4;
     return 1;
   });
@@ -171,48 +173,12 @@ export function GameEngineStage({
               {subjectTitle}
             </h1>
             
-            {/* Grade Switcher */}
-            {isIpas ? (
-              <div className="flex items-center space-x-2 bg-black/10 p-1 rounded-2xl border border-white/20">
-                {[4, 5, 6].map((gr) => (
-                  <button
-                    key={gr}
-                    type="button"
-                    onClick={() => {
-                      setSelectedGrade(gr);
-                      setActiveLevel(null);
-                    }}
-                    className={`px-3 py-1 font-extrabold text-xs md:text-sm rounded-xl border-2 border-[#3C632A] transition-all cursor-pointer ${
-                      selectedGrade === gr
-                        ? "bg-[#7FD13B] text-white shadow-sm scale-105"
-                        : "bg-white/80 text-[#3C632A] hover:bg-white"
-                    }`}
-                  >
-                    Kelas {gr} SD
-                  </button>
-                ))}
-              </div>
-            ) : (subjectId === "matematika" || subjectId === "math" || isIndo || isEnglish || isPancasila || isSeni) && (
-              <div className="flex items-center space-x-2 bg-black/10 p-1 rounded-2xl border border-white/20">
-                {[1, 2, 3, 4, 5, 6].map((gr) => (
-                  <button
-                    key={gr}
-                    type="button"
-                    onClick={() => {
-                      setSelectedGrade(gr);
-                      setActiveLevel(null);
-                    }}
-                    className={`px-3 py-1 font-extrabold text-xs md:text-sm rounded-xl border-2 border-[#3C632A] transition-all cursor-pointer ${
-                      selectedGrade === gr
-                        ? "bg-[#7FD13B] text-white shadow-sm scale-105"
-                        : "bg-white/80 text-[#3C632A] hover:bg-white"
-                    }`}
-                  >
-                    Kelas {gr} SD
-                  </button>
-                ))}
-              </div>
-            )}
+            {/* Static Grade Badge */}
+            <div className="flex items-center space-x-2 bg-black/20 px-3.5 py-1.5 rounded-2xl border-2 border-white/30 shadow-inner">
+              <span className="text-[#FFDF59] font-black text-xs md:text-sm uppercase tracking-wider drop-shadow-sm">
+                Kelas {selectedGrade} SD
+              </span>
+            </div>
           </div>
 
           <div className="flex items-center space-x-3">

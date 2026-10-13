@@ -387,6 +387,8 @@ export default function Page() {
       role: "siswa",
       isLoggedIn: true,
       createdAt: currentSession?.createdAt || new Date().toISOString(),
+      roomCode: currentSession?.roomCode,
+      jenjang: currentSession?.jenjang,
       accessibilityConfig: config,
     };
     setActiveSession(siswaSession);
@@ -559,6 +561,8 @@ export default function Page() {
             role: userProfile.role,
             isLoggedIn: true,
             createdAt: new Date().toISOString(),
+            roomCode: userProfile.current_room_code,
+            jenjang: userProfile.jenjang || userProfile.accessibility_config?.jenjang,
             accessibilityConfig: userProfile.accessibility_config
           };
           setActiveSession(session);

@@ -1135,9 +1135,11 @@ export default function DashboardPage() {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Menentukan angka kelas aktif (1 sampai 6) dari selectedGrade atau userSession.jenjang
+  // Menentukan angka kelas aktif (1 sampai 6) dari userSession.jenjang atau selectedGrade
   const activeGradeNum = (() => {
-    const raw = selectedGrade || userSession?.jenjang || "";
+    const raw = (userSession?.role === "siswa" && userSession?.jenjang)
+      ? userSession.jenjang
+      : (userSession?.jenjang || selectedGrade || "");
     const match = raw.match(/\d+/);
     if (match) return parseInt(match[0], 10);
     return 1; // Default ke Kelas 1 SD jika belum ada pilihan
@@ -1475,10 +1477,7 @@ export default function DashboardPage() {
             <div className="relative z-10 max-w-2xl">
               <div className="flex items-center gap-2 mb-2 flex-wrap">
                 <span className="px-3.5 py-1 bg-[#FFDF59] text-[#3C632A] font-black text-xs md:text-sm rounded-xl border-2 border-[#3C632A] uppercase tracking-wider shadow-sm">
-                  {isFaseAB ? "Kelas 1 - 3 SD" : "Kelas 4 - 6 SD"}
-                </span>
-                <span className="px-3 py-1 bg-[#7FD13B] text-white font-black text-xs md:text-sm rounded-xl border-2 border-[#3C632A] shadow-sm">
-                  {selectedGrade || (userSession?.jenjang ? userSession.jenjang : `Kelas ${activeGradeNum} SD`)}
+                  {userSession?.jenjang || (selectedGrade ? selectedGrade : `Kelas ${activeGradeNum} SD`)}
                 </span>
               </div>
               <h1 className="text-3xl md:text-5xl font-black text-[#FFDF59] tracking-tight">
@@ -1508,38 +1507,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Switcher Jenjang Kelas SD */}
-          <div className="flex items-center space-x-2 overflow-x-auto pb-3 mb-4 scrollbar-none flex-wrap gap-2">
-            <span className="text-xs md:text-sm font-black text-[#3C632A] uppercase mr-1 shrink-0 bg-white/70 px-3 py-1.5 rounded-xl border-2 border-[#3C632A]">
-              Pilih Kelas:
-            </span>
-            {[1, 2, 3, 4, 5, 6].map((gr) => {
-              const isActive = activeGradeNum === gr;
-              return (
-                <button
-                  key={gr}
-                  type="button"
-                  onClick={() => {
-                    const newGrade = `Kelas ${gr} SD`;
-                    setSelectedGrade(newGrade);
-                    if (userSession) {
-                      const updated = { ...userSession, jenjang: newGrade };
-                      setUserSession(updated);
-                      setActiveSession(updated);
-                    }
-                    speakText(`Beralih ke mata pelajaran Kelas ${gr} SD`);
-                  }}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs md:text-sm font-black transition-all border-2 border-[#3C632A] cursor-pointer shadow-[3px_3px_0px_0px_#3C632A] ${
-                    isActive
-                      ? "bg-[#7FD13B] text-white scale-105 shadow-[4px_4px_0px_0px_#3C632A]"
-                      : "bg-white text-[#3C632A] hover:bg-[#FFE296]"
-                  }`}
-                >
-                  Kelas {gr} SD
-                </button>
-              );
-            })}
-          </div>
+
 
           {/* Category Filter Pills */}
           <div className="flex items-center space-x-2 overflow-x-auto pb-4 mb-6 scrollbar-none pl-1">
@@ -1564,7 +1532,10 @@ export default function DashboardPage() {
               <button
                 key={subj.id}
                 onClick={() => {
-                  const jenjangParam = `?kelas=${encodeURIComponent(selectedGrade || (userSession?.jenjang ? userSession.jenjang : `Kelas ${activeGradeNum} SD`))}`;
+                  const targetGrade = (userSession?.role === "siswa" && userSession?.jenjang)
+                    ? userSession.jenjang
+                    : (selectedGrade || userSession?.jenjang || `Kelas ${activeGradeNum} SD`);
+                  const jenjangParam = `?kelas=${encodeURIComponent(targetGrade)}`;
                   router.push(`/materi/${subj.id}${jenjangParam}`);
                 }}
                 data-voice-command={`buka ${subj.name.toLowerCase()}`}
