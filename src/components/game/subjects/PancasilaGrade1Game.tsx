@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { speakGlobal } from "@/lib/soundControl";
 import { playPopSound, playSuccessFanfare, playClueChime } from "@/lib/audioSynthesizer";
+import { getActiveSession } from "@/lib/authSession";
+import { isEyeControlEnabled } from "@/lib/accessibility";
 
 interface QuestionItem {
   id: number;
@@ -27,6 +29,9 @@ interface PancasilaGrade1GameProps {
 
 export function PancasilaGrade1Game({ levelId, onLevelComplete, accessibilityMode }: PancasilaGrade1GameProps) {
   const [phase, setPhase] = useState<"materi" | "game">("materi");
+
+  // Fitur Otomatis 8 Detik Membaca Materi Konsep
+  const [isEyeModeActive, setIsEyeModeActive] = useState<boolean>(false);
 
   // Phase 1 interactive states
   const [activeSymbol, setActiveSymbol] = useState<{ sila: string; icon: string; bunyi: string }>({
@@ -88,6 +93,16 @@ export function PancasilaGrade1Game({ levelId, onLevelComplete, accessibilityMod
     isProcessingRef.current = false;
     setQuestionsList(shuffleQuestions(levelData));
   }, [levelId]);
+
+  // Otomatis 8 detik hitung mundur untuk mode kontrol mata
+  useEffect(() => {
+    const session = getActiveSession();
+    const eye =
+      isEyeControlEnabled(session) ||
+      accessibilityMode === "fisik_mata" ||
+      session?.accessibilityConfig?.physicalControlMethod === "mata";
+    setIsEyeModeActive(eye);
+  }, [phase, accessibilityMode, levelId]);
 
   const currentQ = questionsList[currentQuestionIndex] || levelData.questions[0];
 
@@ -170,24 +185,6 @@ export function PancasilaGrade1Game({ levelId, onLevelComplete, accessibilityMod
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              playPopSound();
-              if (phase === "materi") {
-                speakGlobal(`${levelData.title}. ${levelData.conceptText}`);
-              } else {
-                speakGlobal(`Soal nomor ${currentQuestionIndex + 1}. ${currentQ.question}`);
-              }
-            }}
-            className="px-4 py-2 bg-[#C3631D] hover:bg-[#A95316] text-[#FFDF59] font-black rounded-xl border-2 border-[#3C632A] shadow-[2px_2px_0px_0px_#3C632A] flex items-center gap-1.5 text-xs md:text-sm transition-all cursor-pointer"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-            </svg>
-            Dengar Suara
-          </button>
-
           {phase === "game" && !isCompleted && (
             <button
               type="button"
@@ -359,6 +356,8 @@ export function PancasilaGrade1Game({ levelId, onLevelComplete, accessibilityMod
           <button
             type="button"
             onClick={handleStartGameChallenge}
+            data-gaze-role="start-game"
+            id="btn-aku-sudah-paham"
             className="w-full py-5 bg-[#7FD13B] hover:bg-[#6EB832] active:scale-95 text-white border-4 border-[#3C632A] font-black text-2xl sm:text-3xl rounded-[28px] shadow-[4px_4px_0px_0px_#3C632A] transition-all cursor-pointer relative z-20 mt-4"
           >
             Aku Sudah Paham, Mulai Game
@@ -453,6 +452,10 @@ export function PancasilaGrade1Game({ levelId, onLevelComplete, accessibilityMod
                   type="button"
                   disabled={isAnswerChecked}
                   onClick={() => handleSelectAnswer(idx)}
+                  data-quiz-option={String.fromCharCode(65 + idx)}
+                  data-gaze-target={`option-${idx}`}
+                  data-gaze-label={`Pilihan ${String.fromCharCode(65 + idx)}: ${option.slice(0, 20)}`}
+                  id={`quiz-option-${idx}`}
                   className={`p-4 rounded-2xl border-4 font-black text-base md:text-lg text-left transition-all cursor-pointer shadow-[3px_3px_0px_0px_#3C632A] hover:scale-[1.02] active:scale-98 ${btnStyle}`}
                 >
                   <span className="inline-block w-7 h-7 rounded-full bg-white/80 text-[#3C632A] text-center leading-6 text-sm mr-2 border border-[#3C632A]">

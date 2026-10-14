@@ -29,6 +29,14 @@ export function getActiveSession(): UserSession | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as UserSession;
     if (parsed && parsed.isLoggedIn) {
+      // Pastikan akun Guru tidak membawa konfigurasi disabilitas siswa
+      if (parsed.role === "guru") {
+        if (parsed.accessibilityConfig?.specificMode === "tunanetra" || parsed.accessibilityConfig?.mainMode === "sensorik") {
+          parsed.accessibilityConfig = { mainMode: "guru_normal", specificMode: null, physicalControlMethod: null };
+          localStorage.setItem(SESSION_KEY, JSON.stringify(parsed));
+          localStorage.removeItem("pintara_eye_control_enabled");
+        }
+      }
       return parsed;
     }
     return null;

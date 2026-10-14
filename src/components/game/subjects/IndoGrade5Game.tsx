@@ -186,21 +186,7 @@ export function IndoGrade5Game({ levelId, onLevelComplete, accessibilityMode }: 
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={() => {
-              if (phase === "materi") {
-                speakGlobal(levelData.conceptText);
-              } else if (!isCompleted && currentQ) {
-                speakGlobal(`Soal nomor ${currentQuestionIndex + 1}. ${currentQ.question}`);
-              }
-            }}
-            className="px-4 py-2 bg-[#C3631D] hover:bg-[#B25615] text-[#FFDF59] font-black text-xs md:text-sm rounded-xl border-2 border-[#3C632A] shadow-[3px_3px_0px_0px_#3C632A] transition-all flex items-center space-x-2 cursor-pointer"
-          >
-            <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
-            <span>Dengar Suara</span>
-          </button>
-        </div>
+          </div>
       </div>
 
       {/* ================= FASE 1: PENGENALAN KONSEP MATERI ================= */}

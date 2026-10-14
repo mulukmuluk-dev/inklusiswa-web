@@ -171,24 +171,6 @@ export function PancasilaGrade6Game({ levelId, onLevelComplete, accessibilityMod
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              playPopSound();
-              if (phase === "materi") {
-                speakGlobal(`${levelData.title}. ${levelData.conceptText}`);
-              } else {
-                speakGlobal(`Soal nomor ${currentQuestionIndex + 1}. ${currentQ.question}`);
-              }
-            }}
-            className="px-4 py-2 bg-[#C3631D] hover:bg-[#A95316] text-[#FFDF59] font-black rounded-xl border-2 border-[#3C632A] shadow-[2px_2px_0px_0px_#3C632A] flex items-center gap-1.5 text-xs md:text-sm transition-all cursor-pointer"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-            </svg>
-            Dengar Suara
-          </button>
-
           {phase === "game" && !isCompleted && (
             <button
               type="button"

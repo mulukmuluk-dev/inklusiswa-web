@@ -429,7 +429,6 @@ export function useVoiceControl(enabled: boolean = false) {
       if (clean.includes("masuk") || clean.includes("login") || clean.includes("daftar")) {
         playEarcon("success");
         setLastExecuted("Submit Form");
-        window.dispatchEvent(new CustomEvent("pintara_voice_action", { detail: { screenState: "wizard" } }));
         const submitBtn = document.querySelector("button[type='submit']") as HTMLElement | null;
         if (submitBtn) submitBtn.click();
         speak("Mengirim data.");

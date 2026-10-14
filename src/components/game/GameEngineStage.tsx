@@ -37,7 +37,7 @@ import { SeniGrade4Game } from "./subjects/SeniGrade4Game";
 import { SeniGrade5Game } from "./subjects/SeniGrade5Game";
 import { SeniGrade6Game } from "./subjects/SeniGrade6Game";
 import { getActiveSession } from "@/lib/authSession";
-import { isTtsMuted, toggleGlobalTts, speakGlobal } from "@/lib/soundControl";
+import { speakGlobal } from "@/lib/soundControl";
 
 interface GameEngineStageProps {
   subjectId: string;
@@ -72,11 +72,9 @@ export function GameEngineStage({
   });
   const [showRewardModal, setShowRewardModal] = useState<boolean>(false);
   const [rewardStars, setRewardStars] = useState<number>(3);
-  const [isMuted, setIsMuted] = useState<boolean>(false);
   const [activeAccessibilityMode, setActiveAccessibilityMode] = useState<string>("Standar");
 
   useEffect(() => {
-    setIsMuted(isTtsMuted());
     const progressKey = `${subjectId}-k${selectedGrade}`;
     const initialProgress = getSubjectProgress(progressKey);
     setProgress(initialProgress);
@@ -136,31 +134,32 @@ export function GameEngineStage({
     }
   };
 
-  const handleSoundToggle = () => {
-    const muted = toggleGlobalTts();
-    setIsMuted(muted);
-  };
-
   return (
     <div
       className="min-h-screen bg-[#0D9488] bg-cover bg-center bg-no-repeat bg-fixed font-sans text-[#3C632A] relative flex flex-col p-4 md:p-6 overflow-x-hidden"
       style={{ backgroundImage: "url('/images/blackboard_bg.png')" }}
     >
-      {/* Tombol Panah Kembali di Atas Kiri (Persis Seperti Dashboard Utama PINTARA) */}
+      {/* Tombol Kembali (Panah Asli Seperti di Dashboard Utama) */}
       <button
         onClick={() => {
           if (activeLevel !== null) {
             setActiveLevel(null); // Kembali ke peta level
             speakGlobal("Kembali ke peta petualangan.");
           } else {
-            onBackToCatalog(); // Kembali ke katalog utama
+            onBackToCatalog(); // Kembali ke katalog utama petualangan belajar
           }
         }}
+        id="btn-back-nav"
+        data-scan-label={activeLevel !== null ? "Kembali ke Peta Level" : "Kembali ke Petualangan Belajar"}
         data-voice-command="kembali"
-        className="absolute top-6 left-6 text-[#FFBA48] hover:scale-110 transition-transform flex items-center justify-center p-2 z-[60]"
-        title="Kembali ke Katalog Utama"
+        data-no-ring="true"
+        aria-label={activeLevel !== null ? "Kembali ke Peta Level" : "Kembali ke Petualangan Belajar"}
+        className="absolute top-6 left-6 text-[#FFBA48] hover:scale-110 transition-transform flex items-center justify-center p-2 z-[60] cursor-pointer"
+        title={activeLevel !== null ? "Kembali ke Peta Level" : "Kembali ke Petualangan Belajar"}
       >
-        <svg className="w-10 h-10 drop-shadow-md" fill="currentColor" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+        <svg className="w-10 h-10 drop-shadow-md" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
+        </svg>
       </button>
 
       {/* ================= HERO SECTION UTAMA (KONTAINER KUNING VIBRANT DI BAWAH PANAH) ================= */}
@@ -182,17 +181,6 @@ export function GameEngineStage({
           </div>
 
           <div className="flex items-center space-x-3">
-            {/* Mute Button */}
-            <button
-              onClick={handleSoundToggle}
-              className={`p-2.5 md:p-3 rounded-2xl border-4 border-[#3C632A] font-black transition-all shadow-[4px_4px_0px_0px_#3C632A] ${
-                isMuted ? "bg-rose-500 text-white" : "bg-[#7FD13B] text-white hover:scale-105"
-              }`}
-              title={isMuted ? "Suara Ditingkam" : "Suara Aktif"}
-            >
-              {isMuted ? "🔇" : "🔊"}
-            </button>
-
             {/* Stars Count Badge */}
             <div className="flex items-center space-x-1.5 bg-[#FFDF59] text-[#3C632A] font-black px-4 py-2 rounded-2xl border-4 border-[#3C632A] shadow-[4px_4px_0px_0px_#3C632A]">
               <span className="text-xl">⭐</span>
@@ -464,6 +452,8 @@ export function GameEngineStage({
 
             <button
               onClick={handleNextLevelOrMap}
+              data-gaze-primary="true"
+              data-gaze-label={activeLevel && activeLevel < getMaxLevels() ? "Lanjut Level" : "Peta Level"}
               className="w-full py-4 bg-[#7FD13B] hover:bg-[#6EB832] border-4 border-[#3C632A] text-white font-black text-xl rounded-[24px] shadow-[4px_4px_0px_0px_#3C632A] hover:scale-105 active:scale-95 transition-all"
             >
               {activeLevel && activeLevel < getMaxLevels() ? "Lanjut Level Berikutnya" : "Kembali ke Peta Level"}

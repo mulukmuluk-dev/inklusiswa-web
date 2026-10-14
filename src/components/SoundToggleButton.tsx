@@ -13,15 +13,17 @@ interface SoundToggleButtonProps {
 export function SoundToggleButton({ className = "" }: SoundToggleButtonProps) {
   const [muted, setMuted] = useState<boolean>(false);
   const pathname = usePathname();
-  const [shouldShow, setShouldShow] = useState<boolean>(true);
+  const [shouldShow, setShouldShow] = useState<boolean>(false);
 
   useEffect(() => {
-    if (pathname === "/") {
+    const session = getActiveSession();
+    if (session && session.role === "guru") {
+      setShouldShow(false);
+    } else if (pathname === "/") {
       setShouldShow(true);
     } else {
-      const session = getActiveSession();
-      if (session && session.isLoggedIn) {
-        setShouldShow(isFullVoiceEnabled(session));
+      if (session && session.isLoggedIn && isFullVoiceEnabled(session)) {
+        setShouldShow(true);
       } else {
         setShouldShow(false);
       }

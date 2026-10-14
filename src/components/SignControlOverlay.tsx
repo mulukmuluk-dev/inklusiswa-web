@@ -47,10 +47,10 @@ export function SignControlOverlay() {
   
   const [isExpanded, setIsExpanded] = useState<boolean>(true);
 
-  // Cek apakah mode isyarat aktif
+  // Cek apakah mode isyarat aktif (Hanya Siswa)
   useEffect(() => {
     const session = getActiveSession();
-    if (session && (session.accessibilityConfig?.physicalControlMethod === "isyarat" || session.accessibilityConfig?.mainMode === "sensorik_tunarungu")) {
+    if (session && session.role !== "guru" && (session.accessibilityConfig?.physicalControlMethod === "isyarat" || session.accessibilityConfig?.mainMode === "sensorik_tunarungu")) {
       setShouldShow(true);
     } else {
       setShouldShow(false);

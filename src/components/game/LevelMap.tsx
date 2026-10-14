@@ -364,6 +364,11 @@ export function LevelMap({ subjectName, progress, onSelectLevel, grade = 1 }: Le
               key={lvl.id}
               onClick={() => isUnlocked && onSelectLevel(lvl.id)}
               disabled={!isUnlocked}
+              data-gaze-target={`level-${lvl.id}`}
+              data-gaze-label={`Level ${lvl.id}`}
+              data-gaze-primary={isCurrent ? "true" : undefined}
+              data-gaze-current={isCurrent ? "true" : undefined}
+              id={`level-button-${lvl.id}`}
               className={`p-6 rounded-[32px] border-4 border-[#3C632A] flex flex-col items-center justify-between text-center transition-all duration-300 relative shadow-[8px_8px_0px_0px_#3C632A] group min-h-[220px] ${
                 isCompleted
                   ? "bg-[#7FD13B] text-white hover:scale-105 cursor-pointer"

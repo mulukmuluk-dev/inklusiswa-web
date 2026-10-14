@@ -9,13 +9,13 @@ import { isFullVoiceEnabled } from "@/lib/accessibility";
 export function VoiceControlOverlay() {
   const [showPanel, setShowPanel] = useState(true);
   const pathname = usePathname();
-  const [shouldShow, setShouldShow] = useState(true);
+  const [shouldShow, setShouldShow] = useState(false);
 
   useEffect(() => {
-    // Cek apakah mode aksesibilitas mengharuskan Full Voice Control
+    // Cek apakah mode aksesibilitas mengharuskan Full Voice Control (Hanya Siswa)
     const session = getActiveSession();
-    if (session && session.isLoggedIn) {
-      setShouldShow(isFullVoiceEnabled(session));
+    if (session && session.isLoggedIn && session.role !== "guru" && isFullVoiceEnabled(session)) {
+      setShouldShow(true);
     } else {
       setShouldShow(false);
     }

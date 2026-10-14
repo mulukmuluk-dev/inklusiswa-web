@@ -23,13 +23,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             <a className="rounded-full px-4 py-1.5 text-[24px] font-black text-[#3C632A] transition-colors duration-200 hover:bg-[#3C632A] hover:text-[#FFFFDB]" href="#akses">Mulai Main</a>
           </nav>
           <div className="flex items-center gap-2">
-            <a
-              href="#akses"
-              className="group relative inline-block min-h-[50px] overflow-hidden rounded-full border-4 border-[#3C632A] bg-[#FF784E] px-[24px] py-[6px] text-center text-[24px] font-black text-[#FFFFDB] transition-colors duration-300 shadow-[4px_4px_0px_0px_#3C632A]"
+            <button
+              type="button"
+              onClick={onStart}
+              className="group relative inline-block min-h-[50px] overflow-hidden rounded-full border-4 border-[#3C632A] bg-[#FF784E] px-[24px] py-[6px] text-center text-[24px] font-black text-[#FFFFDB] transition-colors duration-300 shadow-[4px_4px_0px_0px_#3C632A] cursor-pointer"
             >
               <span className="relative z-10">Masuk Aplikasi</span>
               <span className="absolute inset-0 z-0 w-0 rounded-full bg-[#3C632A] transition-all duration-300 group-hover:w-full"></span>
-            </a>
+            </button>
           </div>
         </div>
       </header>
