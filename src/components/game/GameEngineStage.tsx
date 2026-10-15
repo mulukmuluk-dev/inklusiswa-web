@@ -136,10 +136,10 @@ export function GameEngineStage({
 
   return (
     <div
-      className="min-h-screen bg-[#0D9488] bg-cover bg-center bg-no-repeat bg-fixed font-sans text-[#3C632A] relative flex flex-col p-4 md:p-6 overflow-x-hidden"
-      style={{ backgroundImage: "url('/images/blackboard_bg.png')" }}
+      className="min-h-screen bg-[#FFF9EE] font-sans text-slate-900 relative flex flex-col p-4 md:p-6 overflow-x-hidden"
+      style={{ backgroundImage: "radial-gradient(#F5DCB0 1.5px, transparent 1.5px)", backgroundSize: "24px 24px" }}
     >
-      {/* Tombol Kembali (Panah Asli Seperti di Dashboard Utama) */}
+      {/* Tombol Kembali */}
       <button
         onClick={() => {
           if (activeLevel !== null) {
@@ -154,30 +154,30 @@ export function GameEngineStage({
         data-voice-command="kembali"
         data-no-ring="true"
         aria-label={activeLevel !== null ? "Kembali ke Peta Level" : "Kembali ke Petualangan Belajar"}
-        className="absolute top-6 left-6 text-[#FFBA48] hover:scale-110 transition-transform flex items-center justify-center p-2 z-[60] cursor-pointer"
+        className="absolute top-6 left-6 text-slate-700 bg-white hover:bg-amber-50 border-2 border-amber-200 rounded-full shadow-xs hover:scale-105 transition-all flex items-center justify-center p-2.5 z-[60] cursor-pointer"
         title={activeLevel !== null ? "Kembali ke Peta Level" : "Kembali ke Petualangan Belajar"}
       >
-        <svg className="w-10 h-10 drop-shadow-md" fill="currentColor" viewBox="0 0 24 24">
+        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
           <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
         </svg>
       </button>
 
-      {/* ================= HERO SECTION UTAMA (KONTAINER KUNING VIBRANT DI BAWAH PANAH) ================= */}
-      <div className="flex-1 bg-[#FFBA48] rounded-[32px] p-6 md:p-8 mt-20 mr-4 ml-4 mb-8 shadow-xl border-4 border-[#3C632A] flex flex-col relative overflow-hidden animate-in fade-in duration-300">
+      {/* ================= HERO SECTION UTAMA ================= */}
+      <div className="flex-1 bg-white rounded-[36px] p-6 md:p-8 mt-20 mr-2 ml-2 md:mr-4 md:ml-4 mb-8 shadow-md shadow-amber-900/5 border-2 border-amber-200/80 flex flex-col relative overflow-hidden animate-in fade-in duration-300">
         
-        {/* Kontainer Scroll Utama: Mencakup header hingga bagian bawah sehingga scrollbar membentang penuh dari paling atas */}
+        {/* Kontainer Scroll Utama */}
         <main className="flex-1 w-full overflow-y-auto custom-scrollbar pr-2 flex flex-col items-center justify-start space-y-6">
           
-          {/* ================= HEADER INNER BAR (ORANGE KARAMEL) ================= */}
-          <div className="w-full bg-[#C3631D] border-4 border-[#3C632A] p-4 md:p-5 rounded-[28px] shadow-md flex items-center justify-between shrink-0 text-white flex-wrap gap-3">
+          {/* ================= HEADER INNER BAR ================= */}
+          <div className="w-full bg-gradient-to-r from-[#FFC727] via-[#FFB800] to-[#FFA700] border-2 border-amber-300/90 p-4 md:p-5 rounded-[28px] shadow-xs flex items-center justify-between shrink-0 text-slate-900 flex-wrap gap-3">
             <div className="flex items-center space-x-3 flex-wrap gap-2">
-              <h1 className="text-xl md:text-3xl font-black text-[#FFDF59] tracking-tight drop-shadow-sm">
+              <h1 className="text-xl md:text-3xl font-black text-slate-950 tracking-tight">
                 {subjectTitle}
               </h1>
               
               {/* Static Grade Badge */}
-              <div className="flex items-center space-x-2 bg-black/20 px-3.5 py-1.5 rounded-2xl border-2 border-white/30 shadow-inner">
-                <span className="text-[#FFDF59] font-black text-xs md:text-sm uppercase tracking-wider drop-shadow-sm">
+              <div className="flex items-center space-x-2 bg-white/40 px-3.5 py-1.5 rounded-2xl border border-white/60 shadow-xs">
+                <span className="text-slate-900 font-black text-xs md:text-sm uppercase tracking-wider">
                   Kelas {selectedGrade} SD
                 </span>
               </div>
@@ -185,9 +185,9 @@ export function GameEngineStage({
 
             <div className="flex items-center space-x-3">
               {/* Stars Count Badge */}
-              <div className="flex items-center space-x-1.5 bg-[#FFDF59] text-[#3C632A] font-black px-4 py-2 rounded-2xl border-4 border-[#3C632A] shadow-sm">
+              <div className="flex items-center space-x-1.5 bg-white text-slate-900 font-black px-4 py-2 rounded-2xl border-2 border-amber-200 shadow-xs">
                 <svg className="w-5 h-5 text-amber-500 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-                <span className="text-lg md:text-xl">{progress.totalStars}</span>
+                <span className="text-lg md:text-xl text-slate-950 font-black">{progress.totalStars}</span>
               </div>
             </div>
           </div>
@@ -438,27 +438,27 @@ export function GameEngineStage({
 
       {/* ================= REWARD CELEBRATION MODAL ================= */}
       {showRewardModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in zoom-in duration-300">
-          <div className="bg-[#FFE296] border-8 border-[#3C632A] rounded-[40px] p-8 md:p-12 max-w-lg w-full text-center shadow-2xl relative overflow-hidden flex flex-col items-center space-y-6">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in zoom-in duration-300">
+          <div className="bg-white border-2 border-amber-200 rounded-[36px] p-8 md:p-12 max-w-lg w-full text-center shadow-2xl relative overflow-hidden flex flex-col items-center space-y-6">
             <div className="animate-bounce flex justify-center space-x-3">
               <svg className="w-12 h-12 text-amber-500 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
               <svg className="w-14 h-14 text-amber-500 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
               <svg className="w-12 h-12 text-amber-500 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
             </div>
 
-            <h2 className="text-3xl md:text-4xl font-black text-[#3C632A] drop-shadow-sm">
+            <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
               LUAR BIASA!
             </h2>
 
-            <p className="text-lg font-black text-[#3C632A] leading-relaxed">
-              Kamu berhasil menyelesaikan <span className="text-[#C3631D]">Level {activeLevel}</span> dan mendapatkan <span className="text-[#C3631D]">{rewardStars} Bintang Emas</span>!
+            <p className="text-lg font-bold text-slate-700 leading-relaxed">
+              Kamu berhasil menyelesaikan <span className="text-amber-800 font-black">Level {activeLevel}</span> dan mendapatkan <span className="text-amber-800 font-black">{rewardStars} Bintang Emas</span>!
             </p>
 
             <button
               onClick={handleNextLevelOrMap}
               data-gaze-primary="true"
               data-gaze-label={activeLevel && activeLevel < getMaxLevels() ? "Lanjut Level" : "Peta Level"}
-              className="w-full py-4 bg-[#7FD13B] hover:bg-[#6EB832] border-4 border-[#3C632A] text-white font-black text-xl rounded-[24px] shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all"
+              className="w-full py-4.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 border-2 border-amber-300 text-slate-950 font-black text-xl rounded-2xl shadow-md shadow-amber-900/10 hover:shadow-lg transition-all cursor-pointer"
             >
               {activeLevel && activeLevel < getMaxLevels() ? "Lanjut Level Berikutnya" : "Kembali ke Peta Level"}
             </button>

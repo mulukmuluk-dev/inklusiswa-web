@@ -136,19 +136,19 @@ export default function Page() {
   // Render Layar 1: Loading Screen
   if (screenState === "loading") {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] relative overflow-hidden flex flex-col items-center justify-center p-4">
-        <div className="absolute top-1/3 left-1/3 w-96 h-96 bg-cyan-100/50 rounded-full blur-[140px] pointer-events-none" />
-        <div className="absolute bottom-1/3 right-1/3 w-[28rem] h-[28rem] bg-blue-100/40 rounded-full blur-[150px] pointer-events-none" />
+      <div className="min-h-screen bg-[#FFF9EE] relative overflow-hidden flex flex-col items-center justify-center p-4">
+        <div className="absolute top-1/3 left-1/3 w-96 h-96 bg-amber-200/30 rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute bottom-1/3 right-1/3 w-[28rem] h-[28rem] bg-orange-200/20 rounded-full blur-[150px] pointer-events-none" />
 
         <div className="relative z-10 flex flex-col items-center">
-          <div className="w-24 h-24 md:w-32 md:h-32 bg-white rounded-xl shadow-xl shadow-slate-200/50 border border-slate-100 flex items-center justify-center p-3 mb-3 animate-in fade-in zoom-in duration-300">
+          <div className="w-24 h-24 md:w-32 md:h-32 bg-white rounded-3xl shadow-xl shadow-amber-900/5 border-2 border-amber-200/80 flex items-center justify-center p-3 mb-3 animate-in fade-in zoom-in duration-300">
             <PintaraLogo size="md" />
           </div>
 
-          <div className="flex space-x-1.5 pt-3">
-            <span className="w-2 h-2 bg-[#0066CC] rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-            <span className="w-2 h-2 bg-[#0F9DB6] rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-            <span className="w-2 h-2 bg-[#41E2C9] rounded-full animate-bounce"></span>
+          <div className="flex space-x-2 pt-3">
+            <span className="w-2.5 h-2.5 bg-amber-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+            <span className="w-2.5 h-2.5 bg-amber-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+            <span className="w-2.5 h-2.5 bg-amber-600 rounded-full animate-bounce"></span>
           </div>
         </div>
       </div>
@@ -162,18 +162,18 @@ export default function Page() {
 
     return (
       <div
-        className="min-h-screen bg-[#F8FAFC] relative overflow-hidden flex flex-col items-center justify-center p-6 text-center cursor-pointer"
+        className="min-h-screen bg-[#FFF9EE] relative overflow-hidden flex flex-col items-center justify-center p-6 text-center cursor-pointer"
         onClick={startWelcomeVoice}
       >
-        <div className="absolute top-1/4 left-1/4 w-[32rem] h-[32rem] bg-teal-100/50 rounded-full blur-[140px] pointer-events-none" />
-        <div className="absolute bottom-1/4 right-1/4 w-[32rem] h-[32rem] bg-cyan-100/60 rounded-full blur-[160px] pointer-events-none" />
+        <div className="absolute top-1/4 left-1/4 w-[32rem] h-[32rem] bg-amber-200/30 rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 w-[32rem] h-[32rem] bg-orange-200/20 rounded-full blur-[160px] pointer-events-none" />
 
         <div className="relative z-10 max-w-2xl flex flex-col items-center animate-in fade-in duration-500">
-          <div className="w-20 h-20 md:w-24 md:h-24 bg-white rounded-xl shadow-2xl shadow-teal-500/10 border border-slate-100 flex items-center justify-center p-4 mb-6 transform hover:scale-105 transition-transform">
+          <div className="w-20 h-20 md:w-24 md:h-24 bg-white rounded-3xl shadow-xl shadow-amber-900/5 border-2 border-amber-200/80 flex items-center justify-center p-4 mb-6 transform hover:scale-105 transition-transform">
             <PintaraLogo size="xl" />
           </div>
 
-          <h1 className="font-script text-4xl md:text-6xl lg:text-7xl font-bold text-[#0066CC] tracking-wide leading-tight mb-4">
+          <h1 className="font-script text-4xl md:text-6xl lg:text-7xl font-bold text-amber-950 tracking-wide leading-tight mb-4">
             {welcomeWords.map((word, idx) => (
               <span
                 key={idx}
@@ -200,11 +200,11 @@ export default function Page() {
           </p>
 
           {!welcomeVoiceStarted && (
-            <div className="mt-6 flex items-center gap-2 px-5 py-2.5 bg-white/80 backdrop-blur-sm border border-[#0066CC]/20 rounded-full shadow-sm animate-pulse">
-              <svg className="w-5 h-5 text-[#0066CC]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <div className="mt-6 flex items-center gap-2 px-5 py-2.5 bg-white/90 backdrop-blur-sm border-2 border-amber-200/80 rounded-full shadow-sm animate-pulse">
+              <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M11 5L6 9H2v6h4l5 4V5z" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              <span className="text-sm font-semibold text-[#0066CC]">Ketuk layar untuk mengaktifkan suara</span>
+              <span className="text-sm font-semibold text-slate-800">Ketuk layar untuk mengaktifkan suara</span>
             </div>
           )}
 
@@ -216,7 +216,7 @@ export default function Page() {
               }
               setScreenState("auth");
             }}
-            className="mt-6 px-6 py-2.5 bg-white border border-slate-200 text-slate-600 hover:text-[#0066CC] font-semibold text-xs md:text-sm rounded-full shadow-sm hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)] transition-all flex items-center gap-2 cursor-pointer"
+            className="mt-6 px-6 py-2.5 bg-white border-2 border-amber-200/80 text-slate-800 hover:text-amber-600 font-bold text-xs md:text-sm rounded-full shadow-sm hover:shadow-md transition-all flex items-center gap-2 cursor-pointer"
           >
             <span>Masuk ke Login →</span>
           </button>

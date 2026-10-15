@@ -12,7 +12,11 @@ export function VoiceControlOverlay() {
   const [shouldShow, setShouldShow] = useState(false);
 
   useEffect(() => {
-    // Cek apakah mode aksesibilitas mengharuskan Full Voice Control (Hanya Siswa)
+    // Cek apakah mode aksesibilitas mengharuskan Full Voice Control (Hanya Siswa di dashboard/belajar, BUKAN landing page)
+    if (!pathname || pathname === "/") {
+      setShouldShow(false);
+      return;
+    }
     const session = getActiveSession();
     if (session && session.isLoggedIn && session.role !== "guru" && isFullVoiceEnabled(session)) {
       setShouldShow(true);

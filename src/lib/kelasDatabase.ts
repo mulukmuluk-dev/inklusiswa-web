@@ -62,6 +62,12 @@ export interface ChatMessage {
   text: string;
 }
 
+export interface ExamTimerConfig {
+  durationMinutes: number;
+  startedAt: number | null; // timestamp in ms, or null if stopped
+  isActive: boolean;
+}
+
 export interface ClassRoom {
   code: string;
   className: string;
@@ -72,6 +78,7 @@ export interface ClassRoom {
   materials: MaterialItem[];
   quizzes: QuizItem[];
   exams: ExamItem[];
+  examTimerConfig?: ExamTimerConfig;
 }
 
 const INITIAL_CLASSES: Record<string, ClassRoom> = {
@@ -694,3 +701,40 @@ export async function fetchExamResults(roomCode: string): Promise<ExamResultRow[
     return [];
   }
 }
+
+export function getRoomExamTimer(roomCode: string): ExamTimerConfig {
+  if (typeof window === "undefined" || !roomCode) {
+    return { durationMinutes: 60, startedAt: null, isActive: false };
+  }
+  const cleanCode = roomCode.toUpperCase().trim();
+  const key = `pintara_room_exam_timer_${cleanCode}`;
+  const raw = localStorage.getItem(key);
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed.durationMinutes === "number") return parsed;
+    } catch {}
+  }
+  const room = getClassRoom(cleanCode);
+  if (room?.examTimerConfig) return room.examTimerConfig;
+  return { durationMinutes: 60, startedAt: null, isActive: false };
+}
+
+export function setRoomExamTimer(roomCode: string, config: ExamTimerConfig): void {
+  if (typeof window === "undefined" || !roomCode) return;
+  const cleanCode = roomCode.toUpperCase().trim();
+  const key = `pintara_room_exam_timer_${cleanCode}`;
+  localStorage.setItem(key, JSON.stringify(config));
+
+  const room = getClassRoom(cleanCode);
+  if (room) {
+    room.examTimerConfig = config;
+    saveClassRoom(room);
+  }
+
+  // Dispatch custom event for immediate reactive wakeup in active browser tabs
+  window.dispatchEvent(new CustomEvent("pintara_exam_timer_updated", {
+    detail: { roomCode: cleanCode, config }
+  }));
+}
+

@@ -51,8 +51,12 @@ export function MotorControlOverlay() {
   const lastConfirmTimeRef = useRef<number>(0);
   const multiTouchActiveRef = useRef<boolean>(false);
 
-  // 1. Sinkronisasi Status Aktivasi Sesi Siswa
+  // 1. Sinkronisasi Status Aktivasi Sesi Siswa (Hanya aktif di dashboard/belajar, BUKAN landing page)
   useEffect(() => {
+    if (!pathname || pathname === "/") {
+      setIsEnabled(false);
+      return;
+    }
     const session = getActiveSession();
     // Jangan aktif jika role guru atau jika kontrol mata sedang aktif
     if (session && session.role !== "guru" && !isEyeControlEnabled(session)) {
@@ -531,12 +535,12 @@ export function MotorControlOverlay() {
         data-a11y-ignore="true"
         className="fixed bottom-6 left-6 z-[9998] select-none font-sans"
       >
-        <div className="bg-[#3C632A] text-white border-2 border-[#FFDF59] shadow-[0_8px_24px_rgba(0,0,0,0.25)] rounded-2xl p-2.5 flex items-center gap-3 backdrop-blur-md">
+        <div className="bg-slate-900/95 text-white border-2 border-amber-300 shadow-xl rounded-2xl p-2.5 flex items-center gap-3 backdrop-blur-md">
           {/* Status Label & Icon Mode */}
           <div className="flex items-center gap-2 pl-2">
-            <div className="w-3 h-3 rounded-full bg-[#73B14C] animate-pulse" />
+            <div className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse" />
             <div className="flex flex-col">
-              <span className="text-[10px] uppercase font-bold text-[#FFDF59] tracking-wider">
+              <span className="text-[10px] uppercase font-bold text-amber-400 tracking-wider">
                 Motorik Adaptif
               </span>
               <span className="text-xs font-black">
@@ -557,7 +561,7 @@ export function MotorControlOverlay() {
                   else if (config.subMode === "single_switch") switchSubMode("standar_besar");
                   else switchSubMode("tremor_filter");
                 }}
-                className="px-2.5 py-1.5 bg-[#FFBA48] hover:bg-[#FFDF59] text-[#5D3A1A] font-extrabold text-xs rounded-xl transition-all cursor-pointer shadow-sm"
+                className="px-2.5 py-1.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-extrabold text-xs rounded-xl transition-all cursor-pointer shadow-xs"
                 title="Ganti Mode Motorik"
               >
                 Ganti Mode

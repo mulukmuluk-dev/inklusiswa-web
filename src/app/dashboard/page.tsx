@@ -27,6 +27,9 @@ import {
   fetchExamResults,
   QuizResultRow,
   ExamResultRow,
+  getRoomExamTimer,
+  setRoomExamTimer,
+  ExamTimerConfig,
 } from "@/lib/kelasDatabase";
 
 import {
@@ -125,7 +128,7 @@ export default function DashboardPage() {
   const [examEssayAnswers, setExamEssayAnswers] = useState<Record<string, string>>({});
   const [listeningEssayId, setListeningEssayId] = useState<string | null>(null);
   const [examSubmitted, setExamSubmitted] = useState<boolean>(false);
-  const [examTimer, setExamTimer] = useState<number>(2700);
+  const [examTimer, setExamTimer] = useState<number>(0);
 
   // Modal Pilih Kelas (Jenjang)
   const [isGradeModalOpen, setIsGradeModalOpen] = useState<boolean>(false);
@@ -142,6 +145,18 @@ export default function DashboardPage() {
   const [teacherRoomCode, setTeacherRoomCode] = useState<string>("INKLU-1234");
   const [teacherRoom, setTeacherRoom] = useState<ClassRoom | null>(null);
   const [guruToast, setGuruToast] = useState<string>("");
+
+  // Guru Room Exam Timer Configuration State (Isolated Per-Room)
+  const [guruTimerDuration, setGuruTimerDuration] = useState<number>(30); // in minutes
+  const [teacherRoomTimer, setTeacherRoomTimer] = useState<ExamTimerConfig>({
+    durationMinutes: 30,
+    startedAt: null,
+    isActive: false,
+  });
+  const [guruRemainingSeconds, setGuruRemainingSeconds] = useState<number>(0);
+
+  // Student Room Exam Timer State
+  const [studentRoomTimer, setStudentRoomTimer] = useState<ExamTimerConfig | null>(null);
 
   // Daftar Siswa & Manajemen Akun Guru States
   const [studentsList, setStudentsList] = useState<StudentProfile[]>([]);
@@ -311,6 +326,98 @@ export default function DashboardPage() {
     setGuruToast(msg);
     speakText(msg);
     setTimeout(() => setGuruToast(""), 4500);
+  };
+
+  // Sync teacher room timer on teacherRoomCode change & listen for updates
+  useEffect(() => {
+    if (!teacherRoomCode) return;
+    const clean = teacherRoomCode.toUpperCase().trim();
+    const cfg = getRoomExamTimer(clean);
+    setTeacherRoomTimer(cfg);
+    if (cfg.durationMinutes) {
+      setGuruTimerDuration(cfg.durationMinutes);
+    }
+
+    const handleTimerUpdate = (e: any) => {
+      if (!e.detail || e.detail.roomCode === clean) {
+        setTeacherRoomTimer(getRoomExamTimer(clean));
+      }
+    };
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === `pintara_room_exam_timer_${clean}`) {
+        setTeacherRoomTimer(getRoomExamTimer(clean));
+      }
+    };
+
+    window.addEventListener("pintara_exam_timer_updated", handleTimerUpdate);
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener("pintara_exam_timer_updated", handleTimerUpdate);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [teacherRoomCode]);
+
+  // Live countdown preview for Guru Monitoring tab
+  useEffect(() => {
+    if (!teacherRoomTimer.isActive || !teacherRoomTimer.startedAt) {
+      setGuruRemainingSeconds(0);
+      return;
+    }
+    const updateCountdown = () => {
+      const totalSec = teacherRoomTimer.durationMinutes * 60;
+      const elapsed = Math.floor((Date.now() - (teacherRoomTimer.startedAt || Date.now())) / 1000);
+      const remaining = Math.max(0, totalSec - elapsed);
+      setGuruRemainingSeconds(remaining);
+    };
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [teacherRoomTimer]);
+
+  const handleStartGuruTimer = (duration?: number) => {
+    const finalDuration = duration || guruTimerDuration;
+    const cleanCode = teacherRoomCode.toUpperCase().trim();
+    if (!cleanCode) {
+      alert("Pilih atau hubungkan room terlebih dahulu.");
+      return;
+    }
+    const newConfig: ExamTimerConfig = {
+      durationMinutes: finalDuration,
+      startedAt: Date.now(),
+      isActive: true,
+    };
+    setRoomExamTimer(cleanCode, newConfig);
+    setTeacherRoomTimer(newConfig);
+    showGuruToast(`Timer Ujian untuk Room ${cleanCode} berhasil dimulai (${finalDuration} menit)!`);
+    speakText(`Timer ujian resmi untuk room ${cleanCode} telah diaktifkan selama ${finalDuration} menit.`);
+  };
+
+  const handleStopGuruTimer = () => {
+    const cleanCode = teacherRoomCode.toUpperCase().trim();
+    const newConfig: ExamTimerConfig = {
+      durationMinutes: guruTimerDuration,
+      startedAt: null,
+      isActive: false,
+    };
+    setRoomExamTimer(cleanCode, newConfig);
+    setTeacherRoomTimer(newConfig);
+    showGuruToast(`Timer Ujian untuk Room ${cleanCode} berhasil dihentikan.`);
+    speakText(`Timer ujian untuk room ${cleanCode} telah dihentikan.`);
+  };
+
+  const handleAddGuruTimerMinutes = (extraMinutes: number) => {
+    const cleanCode = teacherRoomCode.toUpperCase().trim();
+    const current = getRoomExamTimer(cleanCode);
+    const newDuration = (current.durationMinutes || guruTimerDuration) + extraMinutes;
+    const newConfig: ExamTimerConfig = {
+      durationMinutes: newDuration,
+      startedAt: current.startedAt || Date.now(),
+      isActive: true,
+    };
+    setRoomExamTimer(cleanCode, newConfig);
+    setTeacherRoomTimer(newConfig);
+    setGuruTimerDuration(newDuration);
+    showGuruToast(`Waktu ujian Room ${cleanCode} ditambah ${extraMinutes} menit (Total: ${newDuration}m)!`);
   };
 
   const handleGenerateCode = () => {
@@ -1082,19 +1189,73 @@ export default function DashboardPage() {
     };
   }, [activeCode]);
 
-  // Timer Ujian Countdown
+  // Room-Isolated Student Exam Timer Sync
   useEffect(() => {
-    let timerId: NodeJS.Timeout;
-    if (activeSidebarTab === "ujian" && !examSubmitted && examTimer > 0) {
-      if (userSession?.accessibilityConfig?.mainMode === "intelektual") {
-        return;
-      }
-      timerId = setInterval(() => {
-        setExamTimer((prev) => prev - 1);
-      }, 1000);
+    const studentRoomCode = room?.code || activeCode;
+    if (!studentRoomCode) {
+      setStudentRoomTimer(null);
+      return;
     }
-    return () => clearInterval(timerId);
-  }, [activeSidebarTab, examSubmitted, examTimer]);
+    const cleanCode = studentRoomCode.toUpperCase().trim();
+    const updateTimer = () => {
+      const cfg = getRoomExamTimer(cleanCode);
+      setStudentRoomTimer(cfg);
+    };
+    updateTimer();
+
+    const handleTimerEvent = (e: any) => {
+      if (!e.detail || e.detail.roomCode === cleanCode) {
+        updateTimer();
+      }
+    };
+    const handleStorageEvent = (e: StorageEvent) => {
+      if (e.key === `pintara_room_exam_timer_${cleanCode}`) {
+        updateTimer();
+      }
+    };
+
+    window.addEventListener("pintara_exam_timer_updated", handleTimerEvent);
+    window.addEventListener("storage", handleStorageEvent);
+    const pollInterval = setInterval(updateTimer, 2500);
+
+    return () => {
+      window.removeEventListener("pintara_exam_timer_updated", handleTimerEvent);
+      window.removeEventListener("storage", handleStorageEvent);
+      clearInterval(pollInterval);
+    };
+  }, [room?.code, activeCode]);
+
+  // Student Countdown Effect (Calculates Remaining Time Synchronized with startedAt)
+  useEffect(() => {
+    if (!studentRoomTimer || !studentRoomTimer.isActive || !studentRoomTimer.startedAt) {
+      setExamTimer(0);
+      return;
+    }
+
+    if (userSession?.accessibilityConfig?.mainMode === "intelektual") {
+      return;
+    }
+
+    const calcRemaining = () => {
+      if (!studentRoomTimer.startedAt) return 0;
+      const totalSec = studentRoomTimer.durationMinutes * 60;
+      const elapsedSec = Math.floor((Date.now() - studentRoomTimer.startedAt) / 1000);
+      const remaining = Math.max(0, totalSec - elapsedSec);
+      return remaining;
+    };
+
+    setExamTimer(calcRemaining());
+
+    const interval = setInterval(() => {
+      const rem = calcRemaining();
+      setExamTimer(rem);
+      if (rem <= 0) {
+        clearInterval(interval);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [studentRoomTimer, examSubmitted, userSession?.accessibilityConfig?.mainMode]);
 
   const speakText = (text: string) => {
     speakGlobal(text);
@@ -1241,7 +1402,7 @@ export default function DashboardPage() {
       id: "pancasila",
       name: "Pendidikan Pancasila",
       image: "/logos/pkn.png",
-      icon: "🇮🇩",
+      icon: "",
       category: "Karakter",
       description: "Fondasi Karakter, Nilai Pancasila, Norma & Kewarganegaraan",
     },
@@ -1367,7 +1528,7 @@ export default function DashboardPage() {
 
   return (
 
-    <div className="min-h-screen bg-[#0D9488] bg-cover bg-center bg-no-repeat bg-fixed font-sans text-[#3C632A] relative flex overflow-x-hidden" style={{ backgroundImage: "url('/images/blackboard_bg.png')" }}>
+    <div className="min-h-screen bg-[#FFF9EE] font-sans text-slate-800 relative flex overflow-x-hidden">
 
       {/* Tombol Kembali ke Beranda */}
       {!isExamFullscreen && (
@@ -1377,7 +1538,7 @@ export default function DashboardPage() {
           data-dashboard-area="sidebar"
           data-scan-label="Kembali ke Beranda"
           data-no-ring="true"
-          className="absolute top-6 left-6 text-[#FFBA48] hover:scale-110 transition-transform flex items-center justify-center p-2 z-[60]"
+          className="absolute top-6 left-6 text-amber-500 hover:text-amber-600 hover:scale-110 transition-transform flex items-center justify-center p-2 z-[60]"
           title="Kembali ke Halaman Utama"
         >
           <svg className="w-10 h-10 drop-shadow-md" fill="currentColor" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" /></svg>
@@ -1385,10 +1546,15 @@ export default function DashboardPage() {
       )}
 
       {/* ==================== 1. SIDEBAR ==================== */}
-      <aside className="w-[300px] mt-24 mb-10 ml-8 bg-[#FFBA48] rounded-[40px] flex flex-col p-6 z-50 overflow-y-auto shadow-xl shrink-0 border-4 border-[#3C632A] self-start">
+      {!isExamFullscreen && (
+        <aside className="w-[300px] mt-24 mb-10 ml-8 bg-gradient-to-b from-white/60 via-white/45 to-white/50 hover:from-white/70 hover:to-white/55 rounded-[36px] flex flex-col p-6 z-50 shadow-[0_16px_40px_rgba(217,119,6,0.08),inset_0_1.5px_1px_rgba(255,255,255,0.95)] shrink-0 border border-white/80 ring-1 ring-amber-200/50 sticky top-24 self-start relative overflow-hidden transition-all duration-300">
+        {/* Specular Light Flare (Image 1 reference) */}
+        <div className="absolute -top-[1.5px] left-1/2 -translate-x-1/2 w-36 h-[3px] bg-white rounded-full shadow-[0_0_14px_4px_rgba(255,255,255,1)] pointer-events-none" />
+        {/* Glass specular sheen */}
+        <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-white/45 via-white/10 to-transparent pointer-events-none rounded-t-[34px]" />
 
         {/* LOGO AREA */}
-        <div className="flex flex-col items-center gap-2 mb-4 mt-4">
+        <div className="flex flex-col items-center gap-2 mb-4 mt-4 relative z-10">
           <PintaraLogo size="md" />
         </div>
 
@@ -1399,9 +1565,9 @@ export default function DashboardPage() {
           {userSession?.role === "guru" && (
             <button
               onClick={() => setActiveTab("guru")}
-              className={`flex items-center gap-4 px-5 py-4 rounded-[28px] font-black text-xl transition-all ${activeTab === "guru" ? "bg-[#3C632A] text-[#FFFFDB]" : "bg-transparent text-[#3C632A] hover:bg-[#3C632A]/10"}`}
+              className={`flex items-center gap-4 px-5 py-4 rounded-[28px] font-black text-xl transition-all ${activeTab === "guru" ? "bg-gradient-to-r from-amber-400 to-amber-500 text-white shadow-md shadow-amber-500/20" : "bg-transparent text-slate-700 hover:bg-amber-50 hover:text-amber-900 font-bold"}`}
             >
-              <div className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 ${activeTab === "guru" ? "bg-white/20" : "bg-[#3C632A]/10"}`}>
+              <div className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 ${activeTab === "guru" ? "bg-white/20 text-white" : "bg-amber-100/70 text-amber-700"}`}>
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
               </div>
               Akses Guru
@@ -1412,25 +1578,25 @@ export default function DashboardPage() {
           {/* SUB-MENUS AKSES GURU */}
           {activeTab === "guru" && userSession?.role === "guru" && (
             <div className="ml-8 mt-1 mb-4 flex flex-col gap-2 relative">
-              <div className="absolute left-[-16px] top-0 bottom-6 w-1 bg-[#3C632A]/20 rounded-full"></div>
+              <div className="absolute left-[-16px] top-0 bottom-6 w-1 bg-amber-200 rounded-full"></div>
 
               <button
                 onClick={() => setGuruTab("room")}
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${guruTab === "room" ? "bg-[#3C632A]/10 text-[#3C632A] translate-x-2" : "bg-transparent text-[#3C632A]/70 hover:text-[#3C632A]"}`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${guruTab === "room" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
               >
                 Generate Kode & Room
               </button>
 
               <button
                 onClick={() => setGuruTab("siswa")}
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${guruTab === "siswa" ? "bg-[#3C632A]/10 text-[#3C632A] translate-x-2" : "bg-transparent text-[#3C632A]/70 hover:text-[#3C632A]"}`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${guruTab === "siswa" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
               >
                 Kelola Siswa
               </button>
 
               <button
                 onClick={() => setGuruTab("daftar_siswa")}
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${guruTab === "daftar_siswa" ? "bg-[#3C632A]/10 text-[#3C632A] translate-x-2" : "bg-transparent text-[#3C632A]/70 hover:text-[#3C632A]"}`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${guruTab === "daftar_siswa" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
               >
                 Daftar Siswa
               </button>
@@ -1443,7 +1609,7 @@ export default function DashboardPage() {
                   }
                   setGuruTab("materi");
                 }}
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${!hasCreatedRoom ? "opacity-50 cursor-not-allowed text-[#3C632A]/50" : guruTab === "materi" ? "bg-[#3C632A]/10 text-[#3C632A] translate-x-2" : "bg-transparent text-[#3C632A]/70 hover:text-[#3C632A]"}`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${!hasCreatedRoom ? "opacity-50 cursor-not-allowed text-slate-400" : guruTab === "materi" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
               >
                 Upload Materi & Kuis
               </button>
@@ -1456,7 +1622,7 @@ export default function DashboardPage() {
                   }
                   setGuruTab("ujian");
                 }}
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${!hasCreatedRoom ? "opacity-50 cursor-not-allowed text-[#3C632A]/50" : guruTab === "ujian" ? "bg-[#3C632A]/10 text-[#3C632A] translate-x-2" : "bg-transparent text-[#3C632A]/70 hover:text-[#3C632A]"}`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${!hasCreatedRoom ? "opacity-50 cursor-not-allowed text-slate-400" : guruTab === "ujian" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
               >
                 Upload Ujian Resmi
               </button>
@@ -1469,7 +1635,7 @@ export default function DashboardPage() {
                   }
                   setGuruTab("rekap");
                 }}
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${!hasCreatedRoom ? "opacity-50 cursor-not-allowed text-[#3C632A]/50" : guruTab === "rekap" ? "bg-[#3C632A]/10 text-[#3C632A] translate-x-2" : "bg-transparent text-[#3C632A]/70 hover:text-[#3C632A]"}`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${!hasCreatedRoom ? "opacity-50 cursor-not-allowed text-slate-400" : guruTab === "rekap" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
               >
                 Monitoring Content
               </button>
@@ -1482,9 +1648,9 @@ export default function DashboardPage() {
             data-dashboard-area="sidebar"
             data-scan-label="Petualangan Belajar"
             id="sidebar-btn-katalog"
-            className={`flex items-center gap-4 px-5 py-4 rounded-[28px] font-black text-xl transition-all ${activeTab === "katalog" ? "bg-[#3C632A] text-[#FFFFDB]" : "bg-transparent text-[#3C632A] hover:bg-[#3C632A]/10"}`}
+            className={`flex items-center gap-4 px-5 py-4 rounded-[28px] font-black text-xl transition-all ${activeTab === "katalog" ? "bg-gradient-to-r from-amber-400 to-amber-500 text-white shadow-md shadow-amber-500/20" : "bg-transparent text-slate-700 hover:bg-amber-50 hover:text-amber-900 font-bold"}`}
           >
-            <div className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 ${activeTab === "katalog" ? "bg-white/20" : "bg-[#3C632A]/10"}`}>
+            <div className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 ${activeTab === "katalog" ? "bg-white/20 text-white" : "bg-amber-100/70 text-amber-700"}`}>
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
             </div>
             Petualangan Belajar
@@ -1496,9 +1662,9 @@ export default function DashboardPage() {
             data-dashboard-area="sidebar"
             data-scan-label="Kelas Impianku"
             id="sidebar-btn-kelas"
-            className={`flex items-center gap-4 px-5 py-4 rounded-[28px] font-black text-xl transition-all ${activeTab === "kelas" ? "bg-[#3C632A] text-[#FFFFDB]" : "bg-transparent text-[#3C632A] hover:bg-[#3C632A]/10"}`}
+            className={`flex items-center gap-4 px-5 py-4 rounded-[28px] font-black text-xl transition-all ${activeTab === "kelas" ? "bg-gradient-to-r from-amber-400 to-amber-500 text-white shadow-md shadow-amber-500/20" : "bg-transparent text-slate-700 hover:bg-amber-50 hover:text-amber-900 font-bold"}`}
           >
-            <div className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 ${activeTab === "kelas" ? "bg-white/20" : "bg-[#3C632A]/10"}`}>
+            <div className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 ${activeTab === "kelas" ? "bg-white/20 text-white" : "bg-amber-100/70 text-amber-700"}`}>
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
             </div>
             Kelas Impianku
@@ -1507,14 +1673,14 @@ export default function DashboardPage() {
           {/* SUB-MENUS KELAS IMPIANKU */}
           {activeTab === "kelas" && (
             <div className="ml-8 mt-1 flex flex-col gap-2 relative">
-              <div className="absolute left-[-16px] top-0 bottom-6 w-1 bg-[#3C632A]/20 rounded-full"></div>
+              <div className="absolute left-[-16px] top-0 bottom-6 w-1 bg-amber-200 rounded-full"></div>
 
               <button
                 onClick={() => setActiveSidebarTab("kelas")}
                 data-dashboard-area="sidebar"
                 data-scan-label="Tab Kelas"
                 id="sidebar-btn-sub-kelas"
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-lg transition-all ${activeSidebarTab === "kelas" ? "bg-[#3C632A]/10 text-[#3C632A] translate-x-2" : "bg-transparent text-[#3C632A]/70 hover:text-[#3C632A]"}`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-lg transition-all ${activeSidebarTab === "kelas" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
               >
                 <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9.5a2 2 0 00-2-2h-2" /></svg>
                 Kelas
@@ -1525,7 +1691,7 @@ export default function DashboardPage() {
                 data-dashboard-area="sidebar"
                 data-scan-label="Buku Pintar"
                 id="sidebar-btn-sub-buku"
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-lg transition-all ${activeSidebarTab === "materi" ? "bg-[#3C632A]/10 text-[#3C632A] translate-x-2" : "bg-transparent text-[#3C632A]/70 hover:text-[#3C632A]"}`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-lg transition-all ${activeSidebarTab === "materi" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
               >
                 <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
                 Buku Pintar
@@ -1536,7 +1702,7 @@ export default function DashboardPage() {
                 data-dashboard-area="sidebar"
                 data-scan-label="Tantangan"
                 id="sidebar-btn-sub-tantangan"
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-lg transition-all ${activeSidebarTab === "latihan" ? "bg-[#3C632A]/10 text-[#3C632A] translate-x-2" : "bg-transparent text-[#3C632A]/70 hover:text-[#3C632A]"}`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-lg transition-all ${activeSidebarTab === "latihan" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
               >
                 <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /></svg>
                 Tantangan
@@ -1547,7 +1713,7 @@ export default function DashboardPage() {
                 data-dashboard-area="sidebar"
                 data-scan-label="Misi Akhir"
                 id="sidebar-btn-sub-ujian"
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-lg transition-all ${activeSidebarTab === "ujian" ? "bg-[#3C632A]/10 text-[#3C632A] translate-x-2" : "bg-transparent text-[#3C632A]/70 hover:text-[#3C632A]"}`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-lg transition-all ${activeSidebarTab === "ujian" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
               >
                 <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                 Misi Akhir
@@ -1557,14 +1723,14 @@ export default function DashboardPage() {
         </nav>
 
         {/* BOTTOM AREA */}
-        <div className="mt-8 flex flex-col gap-3 pt-6 border-t-2 border-[#3C632A]/20">
+        <div className="mt-8 flex flex-col gap-3 pt-6 border-t-2 border-amber-100/70 relative z-10">
           {userSession?.role === "siswa" && (
             <button
               onClick={handleChangeMode}
               data-dashboard-area="sidebar"
               data-scan-label={`Mode ${activeMode}`}
               id="sidebar-btn-mode"
-              className="w-full px-5 py-4 bg-white hover:bg-[#FFE296] text-[#3C632A] border-4 border-[#3C632A] shadow-md hover:shadow-lg font-black rounded-[24px] transition-all flex items-center justify-center gap-3"
+              className="w-full px-5 py-4 bg-white/80 hover:bg-white text-amber-900 border-2 border-white/90 ring-1 ring-amber-200/70 shadow-xs hover:shadow-md font-black rounded-[24px] transition-all flex items-center justify-center gap-3 cursor-pointer"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
               {activeMode}
@@ -1576,13 +1742,14 @@ export default function DashboardPage() {
             data-dashboard-area="sidebar"
             data-scan-label="Keluar Akun"
             id="sidebar-btn-logout"
-            className="w-full px-5 py-4 bg-[#FF5685] hover:bg-[#FF784E] border-4 border-[#3C632A] shadow-md hover:shadow-lg text-white font-black rounded-[24px] transition-all flex items-center justify-center gap-3"
+            className="w-full px-5 py-4 bg-rose-50/80 hover:bg-rose-100 border-2 border-rose-200/80 shadow-xs hover:shadow-md text-rose-600 font-black rounded-[24px] transition-all flex items-center justify-center gap-3 cursor-pointer"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
             Keluar Akun
           </button>
         </div>
       </aside>
+      )}
 
       {/* ==================== 2. MAIN CONTENT ==================== */}
       <div className="flex-1 flex flex-col w-full min-h-screen">
@@ -1591,22 +1758,25 @@ export default function DashboardPage() {
         {/* VIEW 1: KATALOG MAPEL */}
 
         {activeTab === "katalog" && (
-          <div className="flex-1 bg-[#FFBA48] rounded-[32px] p-8 mt-24 mr-6 ml-6 mb-10 shadow-xl flex flex-col relative overflow-hidden animate-in fade-in duration-300 border-4 border-white/20">
-            <main className="flex-1 w-full overflow-y-auto custom-scrollbar pr-4 space-y-10">
-              {/* Header Banner Katalog */}
-              <div className="mb-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6 bg-[#C3631D] border-4 border-[#3C632A] rounded-[32px] p-8 shadow-xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-teal-100/40 via-cyan-50/20 to-transparent rounded-full blur-3xl pointer-events-none" />
+          <div className="flex-1 bg-gradient-to-br from-white/50 via-white/35 to-amber-50/20 rounded-[36px] p-8 mt-24 mr-6 ml-6 mb-10 shadow-[0_16px_40px_rgba(217,119,6,0.06)] flex flex-col relative animate-in fade-in duration-300 border border-white/80 ring-1 ring-amber-200/50">
+            {/* Specular Light Flare */}
+            <div className="absolute -top-[1.5px] left-1/2 -translate-x-1/2 w-64 md:w-96 h-[3px] bg-white rounded-full shadow-[0_0_12px_2px_rgba(255,255,255,0.9)] pointer-events-none" />
+            {/* Glass highlight band */}
+            <div className="absolute top-0 left-0 right-0 h-36 bg-gradient-to-b from-white/40 via-white/10 to-transparent pointer-events-none rounded-t-[34px]" />
 
+            <main className="w-full space-y-10 relative z-10">
+              {/* Header Banner Katalog */}
+              <div className="mb-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6 bg-gradient-to-r from-[#FFC727] via-[#FFB800] to-[#FFA700] border-2 border-amber-300 rounded-[32px] p-8 shadow-md relative overflow-hidden">
                 <div className="relative z-10 max-w-2xl">
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <span className="px-3.5 py-1 bg-[#FFDF59] text-[#3C632A] font-black text-xs md:text-sm rounded-xl border-2 border-[#3C632A] uppercase tracking-wider shadow-sm">
+                    <span className="px-3.5 py-1.5 bg-white/90 text-amber-900 font-black text-xs md:text-sm rounded-full border border-amber-300 uppercase tracking-wider shadow-xs">
                       {userSession?.jenjang || (selectedGrade ? selectedGrade : `Kelas ${activeGradeNum} SD`)}
                     </span>
                   </div>
-                  <h1 className="text-3xl md:text-5xl font-black text-[#FFDF59] tracking-tight">
+                  <h1 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tight">
                     Pilih Petualanganmu
                   </h1>
-                  <p className="text-white text-lg mt-2 font-bold">
+                  <p className="text-slate-800 text-lg mt-2 font-bold">
                     Mata pelajaran Kurikulum Merdeka Sekolah Dasar (SD).
                   </p>
                 </div>
@@ -1615,7 +1785,7 @@ export default function DashboardPage() {
                 <div className="relative z-10 w-full md:w-80 shrink-0">
                   <div className="relative flex items-center">
                     <div className="absolute left-4 pointer-events-none flex items-center justify-center z-10">
-                      <svg className="w-5 h-5 text-[#3C632A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                       </svg>
                     </div>
@@ -1624,13 +1794,11 @@ export default function DashboardPage() {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Cari petualangan..."
-                      className="w-full pl-12 pr-4 py-3 bg-[#F1F5F9] border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#73B14C]/20 focus:border-[#73B14C] text-sm font-semibold transition-all shadow-inner"
+                      className="w-full pl-12 pr-4 py-3 bg-white/90 border-2 border-white ring-1 ring-amber-300/80 rounded-full text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-white text-sm font-semibold transition-all shadow-inner"
                     />
                   </div>
                 </div>
               </div>
-
-
 
               {/* Category Filter Pills */}
               <div className="flex items-center space-x-2 overflow-x-auto pb-4 mb-6 scrollbar-none pl-1">
@@ -1638,9 +1806,9 @@ export default function DashboardPage() {
                   <button
                     key={cat}
                     onClick={() => setActiveCategory(cat)}
-                    className={`px-4 py-2 rounded-2xl text-xs md:text-sm font-black capitalize whitespace-nowrap transition-all border-2 border-[#3C632A] cursor-pointer ${activeCategory === cat
-                      ? "bg-[#3C632A] text-[#FFFFDB] shadow-md"
-                      : "bg-white text-[#3C632A] hover:bg-[#FFE296] shadow-sm"
+                    className={`px-4 py-2 rounded-2xl text-xs md:text-sm font-black capitalize whitespace-nowrap transition-all border-2 cursor-pointer ${activeCategory === cat
+                      ? "bg-gradient-to-r from-amber-400 to-amber-500 text-white font-black shadow-md border-amber-400"
+                      : "bg-white/80 hover:bg-white text-slate-700 border-2 border-white ring-1 ring-amber-200/50 shadow-xs"
                       }`}
                   >
                     {cat === "semua" ? "Semua Mata Pelajaran" : cat}
@@ -1666,11 +1834,17 @@ export default function DashboardPage() {
                     data-gaze-target={subj.id}
                     data-gaze-label={subj.name}
                     id={`gaze-subject-${subj.id}`}
-                    className="group bg-white border-4 border-[#3C632A] hover:border-[#73B14C] rounded-[32px] p-5 md:p-6 flex flex-col justify-between text-center transition-all duration-300 cursor-pointer shadow-md hover:shadow-xl transform hover:-translate-y-1.5 h-full min-h-[380px] md:min-h-[410px]"
+                    className="group relative bg-gradient-to-b from-white/55 via-white/40 to-white/45 hover:from-white/70 hover:to-white/55 border border-white/85 hover:border-white ring-1 ring-amber-200/50 rounded-[32px] p-5 md:p-6 flex flex-col justify-between text-center transition-all duration-200 cursor-pointer shadow-[0_12px_28px_-8px_rgba(217,119,6,0.10),inset_0_1.5px_1px_0_rgba(255,255,255,0.95)] hover:shadow-[0_18px_36px_-6px_rgba(245,158,11,0.18),inset_0_1.5px_1px_0_rgba(255,255,255,1)] transform hover:-translate-y-2 h-full min-h-[380px] md:min-h-[410px] overflow-hidden"
                   >
-                    <div className="flex flex-col items-center flex-1 w-full">
-                      {/* Container Ilustrasi Bersih */}
-                      <div className="w-full h-36 md:h-44 mb-4 rounded-2xl bg-gradient-to-b from-[#FFF9E6] to-[#FFF4D0]/60 border-2 border-[#3C632A]/15 flex items-center justify-center p-3 shrink-0 relative overflow-hidden group-hover:border-[#3C632A]/30 transition-all">
+                    {/* Specular Light Flare (Image 1 reference) */}
+                    <div className="absolute -top-[1px] left-1/2 -translate-x-1/2 w-28 md:w-36 h-[2.5px] bg-white rounded-full shadow-[0_0_8px_1.5px_rgba(255,255,255,0.95)] pointer-events-none" />
+                    {/* Glossy Glass Highlight Band */}
+                    <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-white/45 via-white/10 to-transparent pointer-events-none rounded-t-[30px]" />
+                    <div className="absolute top-0 right-0 w-28 h-28 bg-gradient-to-bl from-white/40 via-white/10 to-transparent rounded-bl-full pointer-events-none" />
+
+                    <div className="flex flex-col items-center flex-1 w-full relative z-10">
+                      {/* Container Ilustrasi Bersih dengan Tinted Glass Base (Image 2 style) */}
+                      <div className="w-full h-36 md:h-44 mb-4 rounded-2xl bg-white/40 border border-white/70 shadow-inner flex items-center justify-center p-3 shrink-0 relative overflow-hidden group-hover:bg-white/55 transition-all">
                         {subj.image ? (
                           <img
                             src={subj.image}
@@ -1686,46 +1860,46 @@ export default function DashboardPage() {
                         ) : null}
                         <div
                           style={{ display: subj.image ? "none" : "flex" }}
-                          className="w-full h-full rounded-xl bg-white/80 border border-[#3C632A]/20 flex flex-col items-center justify-center text-[#5D3A1A] p-2 text-center"
+                          className="w-full h-full rounded-xl bg-white/70 border border-amber-200/70 flex flex-col items-center justify-center text-amber-800 p-2 text-center"
                         >
-                          <svg className="w-16 h-16 text-[#3C632A]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                          <svg className="w-16 h-16 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
                         </div>
                       </div>
 
                       {/* Badge Kategori */}
                       <div className="flex items-center justify-center mb-2.5 shrink-0">
                         <span className={`px-3 py-1 rounded-full text-[10px] md:text-[11px] font-black uppercase tracking-wider border shadow-xs ${subj.category.toLowerCase() === "karakter"
-                          ? "bg-amber-100 text-amber-800 border-amber-300"
+                          ? "bg-amber-100/90 text-amber-800 border-amber-300"
                           : subj.category.toLowerCase() === "literasi"
-                            ? "bg-blue-100 text-blue-800 border-blue-300"
+                            ? "bg-blue-100/90 text-blue-800 border-blue-300"
                             : subj.category.toLowerCase() === "numerasi"
-                              ? "bg-purple-100 text-purple-800 border-purple-300"
+                              ? "bg-purple-100/90 text-purple-800 border-purple-300"
                               : subj.category.toLowerCase() === "eksplorasi"
-                                ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                                ? "bg-emerald-100/90 text-emerald-800 border-emerald-300"
                                 : subj.category.toLowerCase() === "kreativitas"
-                                  ? "bg-pink-100 text-pink-800 border-pink-300"
+                                  ? "bg-pink-100/90 text-pink-800 border-pink-300"
                                   : subj.category.toLowerCase() === "bahasa"
-                                    ? "bg-indigo-100 text-indigo-800 border-indigo-300"
-                                    : "bg-slate-100 text-slate-800 border-slate-300"
+                                    ? "bg-indigo-100/90 text-indigo-800 border-indigo-300"
+                                    : "bg-slate-100/90 text-slate-800 border-slate-300"
                           }`}>
                           {subj.category}
                         </span>
                       </div>
 
                       {/* Nama Mapel */}
-                      <h3 className="text-base md:text-lg font-black text-[#1F2937] group-hover:text-[#3C632A] transition-colors line-clamp-1 w-full text-center">
+                      <h3 className="text-base md:text-lg font-black text-slate-900 group-hover:text-amber-600 transition-colors line-clamp-1 w-full text-center">
                         {subj.name}
                       </h3>
 
                       {/* Ringkasan Materi */}
-                      <p className="text-xs text-[#4B5563] font-medium mt-1.5 line-clamp-2 leading-relaxed max-w-[95%] text-center">
+                      <p className="text-xs text-slate-600 font-medium mt-1.5 line-clamp-2 leading-relaxed max-w-[95%] text-center">
                         {subj.description}
                       </p>
                     </div>
 
                     {/* Tombol Aksi Mulai Belajar */}
-                    <div className="mt-5 pt-3.5 border-t-2 border-[#3C632A]/10 w-full shrink-0">
-                      <div className="w-full py-2.5 px-4 bg-[#FFDF59] group-hover:bg-[#7FD13B] text-[#3C632A] group-hover:text-white border-2 border-[#3C632A] rounded-2xl font-black text-xs md:text-sm flex items-center justify-center space-x-2 shadow-sm group-hover:shadow-md transition-all">
+                    <div className="mt-5 pt-3.5 border-t border-white/60 w-full shrink-0 relative z-10">
+                      <div className="w-full py-2.5 px-4 bg-gradient-to-r from-amber-400 to-amber-500 group-hover:from-amber-500 group-hover:to-amber-600 text-slate-950 font-black text-xs md:text-sm rounded-2xl flex items-center justify-center space-x-2 shadow-sm group-hover:shadow-md transition-all border border-white/60">
                         <span>Mulai Belajar</span>
                         <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -1741,25 +1915,27 @@ export default function DashboardPage() {
 
         {/* VIEW 2: BELAJAR DI KELAS (LANGSUNG DITAMPILKAN DI PUSAT HERO SECTION DASHBOARD - ENLARGED HERO LAYOUT) */}
         {activeTab === "kelas" && (
-          <div className="flex-1 bg-[#FFBA48] rounded-[32px] p-8 mt-24 mr-6 ml-6 mb-10 shadow-xl flex flex-col relative overflow-hidden animate-in fade-in duration-300 border-4 border-white/20">
-            {/* HORIZONTAL SUB-NAVBAR (ZENIUS STYLE) */}
-
+          <div className="flex-1 bg-gradient-to-br from-white/50 via-white/35 to-amber-50/20 rounded-[36px] p-8 mt-24 mr-6 ml-6 mb-10 shadow-[0_16px_40px_rgba(217,119,6,0.06)] flex flex-col relative animate-in fade-in duration-300 border border-white/80 ring-1 ring-amber-200/50">
+            {/* Specular Light Flare */}
+            <div className="absolute -top-[1.5px] left-1/2 -translate-x-1/2 w-64 md:w-96 h-[3px] bg-white rounded-full shadow-[0_0_12px_2px_rgba(255,255,255,0.9)] pointer-events-none" />
+            {/* Glass highlight band */}
+            <div className="absolute top-0 left-0 right-0 h-36 bg-gradient-to-b from-white/40 via-white/10 to-transparent pointer-events-none rounded-t-[34px]" />
 
             {/* RIGHT CANVAS CONTENT - EXPANDED / ENLARGED HERO CONTAINER */}
-            <main className="flex-1 w-full overflow-y-auto custom-scrollbar pr-4 text-[#3C632A]">
+            <main className="w-full text-slate-800 relative z-10">
               {/* Top Bar Room Kelas Aktif (Dinamis + Dropdown Riwayat Room) */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 bg-[#C3631D] p-5 md:p-6 rounded-3xl border-4 border-[#3C632A] shadow-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 bg-gradient-to-r from-[#FFC727] via-[#FFB800] to-[#FFA700] p-5 md:p-6 rounded-3xl border-2 border-amber-300 shadow-md">
                 {/* Room Aktif (Dropdown Trigger) */}
                 <div ref={roomDropdownRef} className="relative flex items-center space-x-3 max-w-full">
                   <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                  <span className="text-xs md:text-sm font-black text-[#FFDF59] uppercase tracking-wider shrink-0 whitespace-nowrap drop-shadow-sm">ROOM AKTIF:</span>
+                  <span className="text-xs md:text-sm font-black text-slate-900 uppercase tracking-wider shrink-0 whitespace-nowrap">ROOM AKTIF:</span>
                   <button
                     type="button"
                     id="btn-room-aktif"
                     data-dashboard-area="hero"
                     data-scan-label={activeCode ? `Room: ${activeCode}` : "Pilih Room Kelas"}
                     onClick={() => setShowRoomDropdown(!showRoomDropdown)}
-                    className="px-6 py-3 bg-[#FFDF59] hover:bg-[#FFE296] text-[#5D3A1A] font-black text-sm md:text-base rounded-2xl uppercase tracking-wider shadow-md flex items-center space-x-2 transition-all cursor-pointer whitespace-nowrap max-w-[240px] sm:max-w-[380px] md:max-w-[520px]"
+                    className="px-6 py-3 bg-white/90 hover:bg-white text-slate-800 border-2 border-white/90 ring-1 ring-amber-200/70 font-black text-sm md:text-base rounded-2xl uppercase tracking-wider shadow-sm flex items-center space-x-2 transition-all cursor-pointer whitespace-nowrap max-w-[240px] sm:max-w-[380px] md:max-w-[520px]"
                   >
                     <span className="truncate">{activeCode ? `${activeCode} - ${room?.className || `Kelas ${activeCode}`}` : "Pilih Room"}</span>
                     <svg className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${showRoomDropdown ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -1769,10 +1945,10 @@ export default function DashboardPage() {
 
                   {/* Dropdown List */}
                   {showRoomDropdown && (
-                    <div className="absolute top-full left-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 min-w-[280px] max-h-72 overflow-y-auto">
+                    <div className="absolute top-full left-0 mt-2 bg-white/95 border-2 border-white/90 ring-1 ring-amber-200/70 rounded-2xl shadow-2xl z-50 min-w-[280px] max-h-72 overflow-y-auto">
                       {roomHistory.length > 0 ? (
                         <>
-                          <div className="px-4 py-2.5 text-[10px] font-black text-slate-600 uppercase tracking-widest border-b border-slate-100">
+                          <div className="px-4 py-2.5 text-[10px] font-black text-slate-600 uppercase tracking-widest border-b border-amber-100">
                             Riwayat Room ({roomHistory.length})
                           </div>
                           {roomHistory.map((rh) => (
@@ -1781,8 +1957,8 @@ export default function DashboardPage() {
                               type="button"
                               onClick={() => switchToRoom(rh.code)}
                               className={`w-full text-left px-4 py-3 text-sm font-bold transition-all flex items-center justify-between ${rh.code === activeCode
-                                ? "bg-[#73B14C] text-white"
-                                : "text-slate-700 hover:bg-slate-50"
+                                ? "bg-amber-500 text-white font-extrabold"
+                                : "text-slate-700 hover:bg-amber-50/70"
                                 }`}
                             >
                               <span className="truncate">{rh.code} – {rh.className}</span>
@@ -1808,14 +1984,14 @@ export default function DashboardPage() {
                     value={inputCode}
                     onChange={(e) => setInputCode(e.target.value)}
                     placeholder="Kode Room..."
-                    className="px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-sm md:text-base font-bold uppercase focus:outline-none focus:ring-2 focus:ring-[#73B14C]/30 w-40 sm:w-56 text-slate-900"
+                    className="px-4 py-3 bg-white/90 focus:bg-white border-2 border-white/90 ring-1 ring-amber-300/80 rounded-xl text-sm md:text-base font-bold uppercase focus:outline-none focus:ring-2 focus:ring-amber-400 w-40 sm:w-56 text-slate-900 transition-all shadow-inner"
                   />
                   <button
                     type="submit"
                     id="btn-gabung-room"
                     data-dashboard-area="hero"
                     data-scan-label="Gabung Room"
-                    className="px-6 py-3 bg-[#73B14C] hover:bg-[#3C632A] text-white font-bold text-sm md:text-base rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.05)] transition-all shrink-0 cursor-pointer"
+                    className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm md:text-base rounded-xl shadow-sm transition-all shrink-0 cursor-pointer"
                   >
                     Gabung Room
                   </button>
@@ -1832,26 +2008,31 @@ export default function DashboardPage() {
               {activeSidebarTab === "kelas" && room && (
                 <div className="space-y-8">
                   {/* Pemberitahuan Guru */}
-                  <div className="bg-[#C3631D] border-4 border-[#3C632A] rounded-[32px] p-6 md:p-10 shadow-xl">
-                    <h3 className="text-xl md:text-2xl font-black text-white mb-6 flex items-center space-x-3 drop-shadow-sm">
-                      <svg className="w-8 h-8 text-[#FFDF59] fill-current" viewBox="0 0 24 24">
+                  <div className="relative overflow-hidden bg-gradient-to-b from-white/55 via-white/40 to-white/45 hover:from-white/65 hover:to-white/50 border border-white/85 ring-1 ring-amber-200/50 rounded-[32px] p-6 md:p-10 shadow-[0_12px_28px_-8px_rgba(217,119,6,0.08),inset_0_1.5px_1px_rgba(255,255,255,0.95)] transition-all">
+                    {/* Specular Light Flare (Image 1 reference) */}
+                    <div className="absolute -top-[1.5px] left-1/2 -translate-x-1/2 w-48 md:w-64 h-[3px] bg-white rounded-full shadow-[0_0_16px_5px_rgba(255,255,255,1)] pointer-events-none" />
+                    {/* Glass highlight band */}
+                    <div className="absolute top-0 left-0 right-0 h-28 bg-gradient-to-b from-white/45 via-white/10 to-transparent pointer-events-none rounded-t-[30px]" />
+                    
+                    <h3 className="text-xl md:text-2xl font-black text-slate-800 mb-6 flex items-center space-x-3 relative z-10">
+                      <svg className="w-8 h-8 text-amber-500 fill-current" viewBox="0 0 24 24">
                         <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
                       </svg>
                       <span>Pesan dari Guru ({room.className})</span>
                     </h3>
-                    <div className="space-y-3">
+                    <div className="space-y-3 relative z-10">
                       {room.announcements.length === 0 ? (
-                        <div className="p-4 bg-white/10 border-2 border-white/20 rounded-xl text-center text-white/80 text-xs md:text-sm font-bold">
+                        <div className="p-4 bg-white/70 border border-white ring-1 ring-amber-200/40 rounded-xl text-center text-slate-600 text-xs md:text-sm font-bold">
                           Belum ada pengumuman dari guru di room ini.
                         </div>
                       ) : (
                         room.announcements.map((ann) => (
-                          <div key={ann.id} className="p-5 bg-white/10 border-2 border-white/20 rounded-2xl mb-3 shadow-sm">
+                          <div key={ann.id} className="p-5 bg-gradient-to-r from-amber-50/90 to-white/90 border-2 border-white ring-1 ring-amber-200/50 rounded-2xl mb-3 shadow-xs">
                             <div className="flex items-center justify-between mb-2">
-                              <span className="font-black text-lg text-[#FFDF59] drop-shadow-sm">{ann.author}</span>
-                              <span className="text-sm font-bold text-white/80">{ann.date}</span>
+                              <span className="font-black text-lg text-amber-900">{ann.author}</span>
+                              <span className="text-sm font-semibold text-slate-500">{ann.date}</span>
                             </div>
-                            <p className="text-sm md:text-base text-white font-bold leading-relaxed">{ann.content}</p>
+                            <p className="text-sm md:text-base text-slate-700 font-medium leading-relaxed">{ann.content}</p>
                           </div>
                         ))
                       )}
@@ -1859,17 +2040,22 @@ export default function DashboardPage() {
                   </div>
 
                   {/* Media Chat Room */}
-                  <div className="bg-[#C3631D] border-4 border-[#3C632A] rounded-[32px] p-6 md:p-10 shadow-xl flex flex-col h-[650px]">
-                    <h3 className="text-xl md:text-2xl font-black text-white mb-6 pb-4 border-b-4 border-white/20 flex items-center space-x-3 drop-shadow-sm">
-                      <svg className="w-8 h-8 text-[#FFDF59] fill-current" viewBox="0 0 24 24">
+                  <div className="relative overflow-hidden bg-gradient-to-b from-white/55 via-white/40 to-white/45 hover:from-white/65 hover:to-white/50 border border-white/85 ring-1 ring-amber-200/50 rounded-[32px] p-6 md:p-10 shadow-[0_12px_28px_-8px_rgba(217,119,6,0.08),inset_0_1.5px_1px_rgba(255,255,255,0.95)] flex flex-col h-[650px] transition-all">
+                    {/* Specular Light Flare (Image 1 reference) */}
+                    <div className="absolute -top-[1.5px] left-1/2 -translate-x-1/2 w-48 md:w-64 h-[3px] bg-white rounded-full shadow-[0_0_16px_5px_rgba(255,255,255,1)] pointer-events-none" />
+                    {/* Glass highlight band */}
+                    <div className="absolute top-0 left-0 right-0 h-28 bg-gradient-to-b from-white/45 via-white/10 to-transparent pointer-events-none rounded-t-[30px]" />
+
+                    <h3 className="text-xl md:text-2xl font-black text-slate-800 mb-6 pb-4 border-b border-amber-100/80 flex items-center space-x-3 relative z-10">
+                      <svg className="w-8 h-8 text-amber-500 fill-current" viewBox="0 0 24 24">
                         <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z" />
                       </svg>
                       <span>Obrolan Seru (Kode: {room.code})</span>
                     </h3>
 
-                    <div className="flex-1 overflow-y-auto space-y-4 pr-3 mb-4">
+                    <div className="flex-1 overflow-y-auto space-y-4 pr-3 mb-4 relative z-10 bg-white/20 p-4 rounded-2xl border border-white/50 shadow-inner">
                       {room.messages.length === 0 ? (
-                        <div className="h-full flex items-center justify-center p-6 text-center text-white/80 text-xs md:text-sm font-bold bg-white/10 rounded-2xl shadow-inner border-2 border-white/20">
+                        <div className="h-full flex items-center justify-center p-6 text-center text-slate-500 text-xs md:text-sm font-bold bg-white/80 rounded-2xl border-2 border-white ring-1 ring-amber-200/40">
                           Belum ada pesan di chat room. Mulai obrolan kelas pertama Anda!
                         </div>
                       ) : (
@@ -1879,21 +2065,28 @@ export default function DashboardPage() {
                           return (
                             <div key={msg.id} className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
                               <div className="flex items-center space-x-2 mb-1">
-                                <span className="font-black text-sm text-[#FFDF59] mb-1 drop-shadow-sm">{msg.sender}</span>
+                                <span className="font-black text-sm text-slate-700 mb-1">{msg.sender}</span>
                                 {isGuru && (
-                                  <span className="px-2 py-0.5 bg-[#73B14C] text-white font-black text-[10px] rounded-full">
+                                  <span className="px-2 py-0.5 bg-emerald-500 text-white font-black text-[10px] rounded-full shadow-xs">
                                     GURU
                                   </span>
                                 )}
                               </div>
                               <div
-                                className={`max-w-lg p-4 rounded-xl text-xs md:text-sm font-medium leading-relaxed ${isMe ? "bg-[#FFDF59] text-[#5D3A1A] rounded-tr-none border-2 border-[#5D3A1A] shadow-sm" : isGuru ? "bg-white/10 border-2 border-white/20 text-white rounded-tl-none shadow-inner" : "bg-white/5 border border-white/10 text-white rounded-tl-none shadow-inner"}`}
+                                className={`max-w-lg p-4 rounded-2xl text-xs md:text-sm font-medium leading-relaxed ${
+                                  isMe
+                                    ? "bg-gradient-to-r from-amber-400 to-amber-500 text-white rounded-tr-none shadow-md shadow-amber-500/20 border border-amber-300"
+                                    : isGuru
+                                    ? "bg-white/90 border-2 border-white ring-1 ring-amber-300 text-slate-800 rounded-tl-none shadow-xs"
+                                    : "bg-white/80 border-2 border-white ring-1 ring-amber-200/40 text-slate-800 rounded-tl-none shadow-xs"
+                                }`}
                               >
                                 <p>{msg.text}</p>
                                 <button
                                   onClick={() => speakText(`${msg.sender} mengatakan: ${msg.text}`)}
-                                  className={`mt-2 text-[11px] font-bold ${isMe ? "text-white/80 hover:text-white" : "text-[#3C632A] hover:underline"
-                                    }`}
+                                  className={`mt-2 text-[11px] font-bold ${
+                                    isMe ? "text-white/95 hover:underline" : "text-amber-700 hover:underline"
+                                  }`}
                                 >
                                   Bacakan Pesan
                                 </button>
@@ -1904,17 +2097,17 @@ export default function DashboardPage() {
                       )}
                     </div>
 
-                    <form onSubmit={handleSendMessage} className="flex items-center space-x-3 pt-3 border-t border-slate-100">
+                    <form onSubmit={handleSendMessage} className="flex items-center space-x-3 pt-3 border-t border-amber-100/80 relative z-10">
                       <input
                         type="text"
                         value={newMessageText}
                         onChange={(e) => setNewMessageText(e.target.value)}
                         placeholder="Tulis pesan atau pertanyaan untuk kelas..."
-                        className="flex-1 bg-white/10 border-2 border-white/20 rounded-full px-6 py-4 focus:outline-none focus:border-[#FFDF59] text-white font-bold placeholder-white/50 transition-all shadow-inner"
+                        className="flex-1 bg-white/40 focus:bg-white/80 border border-white/70 rounded-full px-6 py-4 focus:outline-none focus:ring-2 focus:ring-amber-400 text-slate-900 font-medium placeholder-slate-500 transition-all shadow-inner"
                       />
                       <button
                         type="submit"
-                        className="px-8 py-4 bg-[#FFDF59] hover:bg-[#FFE296] text-[#5D3A1A] font-extrabold rounded-full transition-all shadow-md hover:scale-105 shrink-0"
+                        className="px-8 py-4 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-white font-extrabold rounded-full transition-all shadow-md hover:scale-105 shrink-0 cursor-pointer"
                       >
                         Kirim Pesan
                       </button>
@@ -1926,18 +2119,21 @@ export default function DashboardPage() {
               {/* TAB MATERI & STUDY CARDS */}
               {activeSidebarTab === "materi" && room && (
                 <div className="space-y-6">
-                  <h3 className="text-xl md:text-2xl font-black text-[#3C632A]">Materi & Study Cards ({room.code})</h3>
+                  <h3 className="text-xl md:text-2xl font-black text-slate-800">Materi & Study Cards ({room.code})</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {room.materials.map((mat) => (
-                      <div key={mat.id} className="bg-white/10 border-2 border-white/20 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
-                        <div>
-                          <span className="px-2.5 py-1 bg-white/20 text-[#FFDF59] font-black text-xs rounded-md mb-3 inline-block border border-white/30">
+                      <div key={mat.id} className="relative overflow-hidden bg-gradient-to-b from-white/55 via-white/40 to-white/45 hover:from-white/70 hover:to-white/55 border border-white/85 hover:border-white ring-1 ring-amber-200/50 rounded-[32px] p-6 shadow-[0_12px_28px_-8px_rgba(217,119,6,0.08),inset_0_1.5px_1px_rgba(255,255,255,0.95)] hover:shadow-[0_18px_36px_-6px_rgba(245,158,11,0.18),inset_0_1.5px_1px_rgba(255,255,255,1)] transition-all flex flex-col justify-between">
+                        {/* Specular Light Flare */}
+                        <div className="absolute -top-[1.5px] left-1/2 -translate-x-1/2 w-36 h-[3px] bg-white rounded-full shadow-[0_0_12px_4px_rgba(255,255,255,1)] pointer-events-none" />
+                        <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-white/45 via-white/10 to-transparent pointer-events-none rounded-t-[30px]" />
+                        <div className="relative z-10">
+                          <span className="px-3 py-1 bg-amber-100/90  text-amber-800 font-black text-xs rounded-full mb-3 inline-block border border-amber-300 shadow-xs">
                             MODUL MATERI
                           </span>
-                          <h4 className="text-lg font-black text-[#FFDF59] drop-shadow-sm mb-2">{mat.title}</h4>
-                          <p className="text-xs md:text-sm text-white font-medium mb-4 leading-relaxed">{mat.summary}</p>
+                          <h4 className="text-lg font-black text-slate-900 mb-2">{mat.title}</h4>
+                          <p className="text-xs md:text-sm text-slate-600 font-medium mb-4 leading-relaxed">{mat.summary}</p>
                         </div>
-                        <div className="pt-4 border-t border-white/20 flex items-center justify-between">
+                        <div className="pt-4 border-t border-amber-100 flex items-center justify-between">
                           <div className="flex gap-2">
                             <button
                               onClick={() => {
@@ -1948,7 +2144,7 @@ export default function DashboardPage() {
                                   alert("Dokumen file asli belum dilampirkan oleh guru.");
                                 }
                               }}
-                              className="text-xs md:text-sm font-bold text-white hover:text-[#FFDF59] flex items-center space-x-1.5 p-2 rounded-lg hover:bg-white/10 transition-colors"
+                              className="text-xs md:text-sm font-bold text-amber-800 hover:text-amber-900 flex items-center space-x-1.5 p-2 rounded-lg hover:bg-amber-50 transition-colors"
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
                               <span>Baca Materi</span>
@@ -1956,26 +2152,15 @@ export default function DashboardPage() {
                             <button
                               onClick={() => speakText(`Materi ${mat.title}. ${mat.content}`)}
                               title="Bacakan dengan suara"
-                              className="text-xs md:text-sm font-bold text-white hover:text-[#FFDF59] flex items-center space-x-1.5 p-2 rounded-lg hover:bg-white/10 transition-colors"
+                              className="text-xs md:text-sm font-bold text-amber-800 hover:text-amber-900 flex items-center space-x-1.5 p-2 rounded-lg hover:bg-amber-50 transition-colors"
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-                              <span>Baca Materi</span>
+                              <span>Dengarkan</span>
                             </button>
-
-                            {isFullVoiceEnabled(userSession) && (
-                              <button
-                                onClick={() => speakText(`Materi ${mat.title}. ${mat.content}`)}
-                                title="Bacakan dengan suara"
-                                className="text-xs md:text-sm font-bold text-white hover:text-[#FFDF59] flex items-center space-x-1.5 p-2 rounded-lg hover:bg-white/10 transition-colors"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
-                                <span>Dengarkan Materi</span>
-                              </button>
-                            )}
                           </div>
                           <button
                             onClick={() => openFlashcards(mat)}
-                            className="px-4 py-2.5 bg-[#FFDF59] hover:bg-[#FFE296] text-[#5D3A1A] font-extrabold text-xs md:text-sm rounded-xl border-2 border-[#5D3A1A] shadow-sm transition-all"
+                            className="px-4 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-white font-extrabold text-xs md:text-sm rounded-xl shadow-sm transition-all"
                           >
                             Study Cards ({mat.flashcards.length})
                           </button>
@@ -1986,47 +2171,52 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {/* TAB LATIHAN SOAL (KHUSUS DITINGKATKAN KETERBACAAN TEKS SOAL & TOMBOL OPSI) */}
+              {/* TAB LATIHAN SOAL */}
               {activeSidebarTab === "latihan" && room && (
                 <div className="space-y-6">
-                  <h3 className="text-xl md:text-2xl font-black text-[#3C632A] drop-shadow-sm">Latihan Soal ({room.code})</h3>
+                  <h3 className="text-xl md:text-2xl font-black text-slate-800">Latihan Soal ({room.code})</h3>
                   {(room?.quizzes || []).map((quiz) => (
-                    <div key={quiz.id} className="bg-[#C3631D] border-4 border-[#3C632A] rounded-[32px] p-6 md:p-10 shadow-xl mb-8">
-                      <h4 className="text-lg md:text-xl font-black text-[#FFDF59] drop-shadow-sm mb-1">{quiz.title}</h4>
-                      <p className="text-xs md:text-sm text-white font-bold mb-6">{quiz.description}</p>
-                      <div className="space-y-6">
-                        {quiz.questions.map((q, qIdx) => {
-                          const selectedOpt = quizAnswers[q.id];
-                          const isCorrect = selectedOpt === q.answerIndex;
-                          return (
-                            <div key={q.id} className="bg-[#C3631D] border-4 border-[#3C632A] rounded-[32px] p-6 md:p-10 shadow-xl space-y-5">
-                              <h5 className="font-black text-base md:text-lg lg:text-xl text-white drop-shadow-sm leading-snug">
-                                {qIdx + 1}. {q.question}
-                              </h5>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                                {q.options.map((opt, optIdx) => {
-                                  const isSelected = selectedOpt === optIdx;
-                                  return (
-                                    <button
-                                      data-quiz-option={opt}
-                                      data-scan-label={`Soal ${qIdx + 1} Opsi ${String.fromCharCode(65 + optIdx)}: ${opt}`}
-                                      id={`latihan-opt-${q.id}-${optIdx}`}
-                                      key={optIdx}
-                                      onClick={() => {
-                                        if (!quizSubmitted) setQuizAnswers({ ...quizAnswers, [q.id]: optIdx });
-                                      }}
-                                      className={`p-5 rounded-2xl text-base md:text-lg font-extrabold text-left transition-all border-4 flex items-center space-x-4 ${isSelected
-                                        ? "bg-[#FFDF59] border-[#3C632A] text-[#5D3A1A] shadow-sm ring-4 ring-[#FFDF59]/30 scale-[1.02]"
-                                        : "bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/40"
-                                        }`}
-                                    >
-                                      <div className={`w-10 h-10 rounded-full border-4 flex items-center justify-center shrink-0 ${isSelected ? "border-[#5D3A1A] bg-white text-[#5D3A1A]" : "border-white/50 text-white"}`}>{String.fromCharCode(65 + optIdx)}</div><span>{opt}</span>
-                                    </button>
-                                  );
-                                })}
-                              </div>
+                    <div key={quiz.id} className="relative overflow-hidden bg-gradient-to-b from-white/55 via-white/40 to-white/45 border border-white/85 ring-1 ring-amber-200/50 rounded-[32px] p-6 md:p-10 shadow-[0_12px_28px_-8px_rgba(217,119,6,0.08),inset_0_1.5px_1px_rgba(255,255,255,0.95)] mb-8">
+                      {/* Specular Light Flare */}
+                      <div className="absolute -top-[1.5px] left-1/2 -translate-x-1/2 w-48 h-[3px] bg-white rounded-full shadow-[0_0_14px_4px_rgba(255,255,255,1)] pointer-events-none" />
+                      <div className="absolute top-0 left-0 right-0 h-28 bg-gradient-to-b from-white/45 via-white/10 to-transparent pointer-events-none rounded-t-[30px]" />
+
+                      <div className="relative z-10">
+                        <h4 className="text-lg md:text-xl font-black text-amber-900 mb-1">{quiz.title}</h4>
+                        <p className="text-xs md:text-sm text-slate-600 font-semibold mb-6">{quiz.description}</p>
+                        <div className="space-y-6">
+                          {quiz.questions.map((q, qIdx) => {
+                            const selectedOpt = quizAnswers[q.id];
+                            const isCorrect = selectedOpt === q.answerIndex;
+                            return (
+                              <div key={q.id} className="bg-gradient-to-br from-amber-50/50 to-white/70  border-2 border-white/90 ring-1 ring-amber-200/50 rounded-[28px] p-6 md:p-8 space-y-5 shadow-xs">
+                                <h5 className="font-black text-base md:text-lg lg:text-xl text-slate-900 leading-snug">
+                                  {qIdx + 1}. {q.question}
+                                </h5>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                                  {q.options.map((opt, optIdx) => {
+                                    const isSelected = selectedOpt === optIdx;
+                                    return (
+                                      <button
+                                        data-quiz-option={opt}
+                                        data-scan-label={`Soal ${qIdx + 1} Opsi ${String.fromCharCode(65 + optIdx)}: ${opt}`}
+                                        id={`latihan-opt-${q.id}-${optIdx}`}
+                                        key={optIdx}
+                                        onClick={() => {
+                                          if (!quizSubmitted) setQuizAnswers({ ...quizAnswers, [q.id]: optIdx });
+                                        }}
+                                        className={`p-5 rounded-2xl text-base md:text-lg font-extrabold text-left transition-all border-2 flex items-center space-x-4 cursor-pointer  ${isSelected
+                                          ? "bg-gradient-to-r from-amber-400 to-amber-500 border-amber-500 text-white shadow-md ring-4 ring-amber-300/40 scale-[1.02]"
+                                          : "bg-white/75 border-white/90 ring-1 ring-amber-200/50 text-slate-700 hover:bg-white hover:border-amber-300 shadow-xs"
+                                          }`}
+                                      >
+                                        <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center shrink-0 ${isSelected ? "border-white bg-white text-amber-600 font-black" : "border-amber-200 text-slate-500"}`}>{String.fromCharCode(65 + optIdx)}</div><span>{opt}</span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
                               {quizSubmitted && selectedOpt !== undefined && (
-                                <div className={`mt-3 p-4 rounded-xl text-xs md:text-sm font-bold ${isCorrect ? "bg-emerald-100 text-emerald-900" : "bg-rose-100 text-rose-900"}`}>
+                                <div className={`mt-3 p-4 rounded-xl text-xs md:text-sm font-bold ${isCorrect ? "bg-emerald-100 text-emerald-900 border border-emerald-200" : "bg-rose-100 text-rose-900 border border-rose-200"}`}>
                                   {isCorrect ? "Benar! " : "Kurang Tepat. "} {q.explanation}
                                 </div>
                               )}
@@ -2036,7 +2226,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="mt-8 flex items-center justify-center">
                         {quizSubmitted ? (
-                          <span className="font-black text-sm text-[#FFDF59] drop-shadow-sm">Skor Berhasil Dicatat!</span>
+                          <span className="font-black text-sm text-emerald-600 bg-emerald-50 px-6 py-2.5 rounded-full border border-emerald-200">Skor Berhasil Dicatat!</span>
                         ) : (
                           <button id="btn-submit-latihan" data-scan-label="Kumpulkan Jawaban Latihan" onClick={async () => { const totalQuestions = quiz.questions.length;
                               let correct = 0;
@@ -2065,42 +2255,51 @@ export default function DashboardPage() {
                                 });
                               }
                             }}
-                            className="px-6 py-3 bg-[#FFDF59] hover:bg-[#FFE296] text-[#5D3A1A] font-extrabold text-xs md:text-sm rounded-xl border-2 border-[#5D3A1A] shadow-sm transition-all"
+                            className="px-8 py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-sm md:text-base rounded-full shadow-md hover:scale-105 transition-all cursor-pointer"
                           >
                             Kirim Jawaban Latihan Soal
                           </button>
                         )}
                       </div>
                     </div>
-                  ))}
+                  </div>
+                ))}
                 </div>
               )}
 
               {/* TAB UJIAN (RUANGGURU SCIENCE COMPETITION STYLE FULLSCREEN MODE) */}
               {activeSidebarTab === "ujian" && room && (
                 <div className="space-y-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 bg-[#C3631D] p-5 md:p-6 rounded-3xl border-4 border-[#3C632A] shadow-xl">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 bg-gradient-to-r from-[#FFC727] via-[#FFB800] to-[#FFA700] p-5 md:p-6 rounded-3xl border-2 border-amber-300 shadow-md">
                     <div>
-                      <h3 className="text-xl md:text-2xl font-black text-[#FFDF59] drop-shadow-sm">Ujian Resmi ({room.code})</h3>
-                      <p className="text-xs md:text-sm font-bold text-white/80 mt-0.5">
+                      <h3 className="text-xl md:text-2xl font-black text-slate-900">Ujian Resmi ({room.code})</h3>
+                      <p className="text-xs md:text-sm font-bold text-slate-800 mt-0.5">
                         Fokus dikerjakan secara profesional tanpa distraksi.
                       </p>
                     </div>
 
                     <div className="flex items-center space-x-3">
                       {userSession?.accessibilityConfig?.mainMode === "intelektual" ? (
-                        <span className="text-xs md:text-sm font-bold text-[#3C632A] bg-[#FFDF59] px-4 py-2 rounded-xl border-2 border-[#3C632A] shrink-0">
+                        <span className="text-xs md:text-sm font-bold text-amber-900 bg-white/90 px-4 py-2 rounded-xl border border-amber-300 shrink-0">
                           Mode Santai (Bebas Waktu)
                         </span>
+                      ) : !studentRoomTimer?.isActive ? (
+                        <span className="text-xs md:text-sm font-bold text-amber-800 bg-amber-100/90 px-4 py-2 rounded-xl border border-amber-300 shrink-0 flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+                          Menunggu Guru Memulai Timer
+                        </span>
                       ) : (
-                        <span className="text-xs md:text-sm font-bold text-rose-600 bg-rose-50 px-4 py-2 rounded-xl border border-rose-200 shrink-0">
+                        <span className={`text-xs md:text-sm font-extrabold px-4 py-2 rounded-xl border shrink-0 flex items-center gap-2 ${
+                          examTimer < 300 ? "text-rose-600 bg-rose-50 border-rose-300 animate-pulse" : "text-amber-900 bg-white border-amber-200"
+                        }`}>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                           Sisa Waktu: {formatTime(examTimer)}
                         </span>
                       )}
                       <button
                         onClick={toggleExamFullscreen}
                         title="Mode Layar Penuh"
-                        className="p-2.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-800 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.05)] transition-all flex items-center justify-center shrink-0 cursor-pointer"
+                        className="p-2.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-800 rounded-xl shadow-xs transition-all flex items-center justify-center shrink-0 cursor-pointer"
                       >
                         <svg className="w-5 h-5 fill-none stroke-current" strokeWidth="2" viewBox="0 0 24 24">
                           <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3" strokeLinecap="round" strokeLinejoin="round" />
@@ -2111,15 +2310,19 @@ export default function DashboardPage() {
 
                   {(room?.exams || []).map((exam) => (
                     <div key={exam.id} className="space-y-8 mb-8">
-                      <h4 className="text-xl md:text-2xl font-black text-[#C3631D] drop-shadow-sm mb-2">{exam.title}</h4>
+                      <h4 className="text-xl md:text-2xl font-black text-slate-900 mb-2">{exam.title}</h4>
                       <div className="space-y-6">
                         {exam.questions.map((eq, eqIdx) => {
                           const selectedOpt = examAnswers[eq.id];
                           const isEssay = eq.type === "essay" || !eq.options || eq.options.length === 0;
                           return (
-                            <div key={eq.id} className="bg-[#C3631D] border-4 border-[#3C632A] rounded-[32px] p-6 md:p-10 shadow-xl space-y-5">
-                              <div className="flex items-center justify-between pb-2 border-b border-slate-200/80">
-                                <span className={`px-3 py-1 font-extrabold text-xs rounded-lg uppercase tracking-wider ${isEssay ? "bg-purple-100 text-purple-800 border border-purple-200" : "bg-slate-200 text-slate-700"
+                            <div key={eq.id} className="relative overflow-hidden bg-gradient-to-b from-white/55 via-white/40 to-white/45 border border-white/85 ring-1 ring-amber-200/50 rounded-[32px] p-6 md:p-10 shadow-[0_12px_28px_-8px_rgba(217,119,6,0.08),inset_0_1.5px_1px_rgba(255,255,255,0.95)] space-y-5">
+                              {/* Specular Light Flare */}
+                              <div className="absolute -top-[1.5px] left-1/2 -translate-x-1/2 w-48 h-[3px] bg-white rounded-full shadow-[0_0_14px_4px_rgba(255,255,255,1)] pointer-events-none" />
+                              <div className="absolute top-0 left-0 right-0 h-28 bg-gradient-to-b from-white/45 via-white/10 to-transparent pointer-events-none rounded-t-[30px]" />
+
+                              <div className="flex items-center justify-between pb-2 border-b border-amber-100/80 relative z-10">
+                                <span className={`px-3 py-1 font-extrabold text-xs rounded-lg uppercase tracking-wider ${isEssay ? "bg-purple-100 text-purple-800 border border-purple-200" : "bg-slate-100 text-slate-700"
                                   }`}>
                                   {isEssay ? `Soal Essay / Uraian ${eq.maxPoints ? `(${eq.maxPoints} Poin)` : ""}` : `Soal Pilihan Ganda (PG)`}
                                 </span>
@@ -2141,7 +2344,7 @@ export default function DashboardPage() {
                                 )}
                               </div>
 
-                              <h5 className="font-black text-base md:text-lg text-white drop-shadow-sm leading-snug">
+                              <h5 className="font-black text-base md:text-lg text-slate-900 leading-snug">
                                 Soal {eqIdx + 1}. {eq.question}
                               </h5>
 
@@ -2157,9 +2360,9 @@ export default function DashboardPage() {
                                     disabled={examSubmitted}
                                     placeholder="Tuliskan atau diktekan uraian jawaban kamu di sini..."
                                     rows={3}
-                                    className="w-full p-3.5 rounded-xl border-2 border-white/40 focus:border-[#FFDF59] focus:outline-none text-white font-medium text-sm transition-all shadow-inner bg-white/10 placeholder-white/50 disabled:bg-white/5 disabled:text-white/40"
+                                    className="w-full p-3.5 rounded-xl border-2 border-amber-200/80 focus:border-amber-400 focus:outline-none text-slate-900 font-medium text-sm transition-all shadow-inner bg-slate-50 placeholder-slate-400 disabled:bg-slate-100 disabled:text-slate-400"
                                   />
-                                  <div className="flex items-center justify-between text-[11px] font-bold text-white/80">
+                                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
                                     <span>
                                       {(examEssayAnswers[eq.id] || "").trim() ? (examEssayAnswers[eq.id] || "").trim().split(/\s+/).length : 0} Kata | {(examEssayAnswers[eq.id] || "").length} Karakter
                                     </span>
@@ -2181,12 +2384,12 @@ export default function DashboardPage() {
                                         onClick={() => {
                                           if (!examSubmitted) setExamAnswers({ ...examAnswers, [eq.id]: optIdx });
                                         }}
-                                        className={`p-5 rounded-2xl text-base md:text-lg font-extrabold text-left transition-all border-4 flex items-center space-x-4 ${isSelected
-                                          ? "bg-[#FFDF59] border-[#3C632A] text-[#5D3A1A] shadow-sm ring-4 ring-[#FFDF59]/30 scale-[1.02]"
-                                          : "bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/40"
+                                        className={`p-5 rounded-2xl text-base md:text-lg font-extrabold text-left transition-all border-2 flex items-center space-x-4 cursor-pointer ${isSelected
+                                          ? "bg-gradient-to-r from-amber-400 to-amber-500 border-amber-500 text-white shadow-md ring-4 ring-amber-300/40 scale-[1.02]"
+                                          : "bg-white border-amber-200/70 text-slate-700 hover:bg-amber-100/50 hover:border-amber-300"
                                           }`}
                                       >
-                                        <div className={`w-10 h-10 rounded-full border-4 flex items-center justify-center shrink-0 ${isSelected ? "border-[#5D3A1A] bg-white text-[#5D3A1A]" : "border-white/50 text-white"}`}>{String.fromCharCode(65 + optIdx)}</div><span>{opt}</span>
+                                        <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center shrink-0 ${isSelected ? "border-white bg-white text-amber-600 font-black" : "border-amber-200 text-slate-500"}`}>{String.fromCharCode(65 + optIdx)}</div><span>{opt}</span>
                                       </button>
                                     );
                                   })}
@@ -2198,7 +2401,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="mt-8 flex items-center justify-center">
                         {examSubmitted ? (
-                          <div className="p-6 bg-teal-50 border-2 border-teal-200 text-teal-900 font-extrabold text-lg rounded-2xl w-full max-w-2xl text-center shadow-sm">
+                          <div className="p-6 bg-emerald-50 border-2 border-emerald-200 text-emerald-900 font-extrabold text-lg rounded-2xl w-full max-w-2xl text-center shadow-sm">
                             Ujian Resmi Berhasil Dikumpulkan! Jawaban Pilihan Ganda & Essay Diteruskan ke Guru Kelas.
                           </div>
                         ) : (
@@ -2230,7 +2433,7 @@ export default function DashboardPage() {
                                 });
                               }
                             }}
-                            className="px-10 py-5 bg-[#FFDF59] hover:bg-[#FFE296] text-[#5D3A1A] border-4 border-[#3C632A] shadow-md font-black text-lg rounded-full transition-all hover:-translate-y-1 active:translate-y-1"
+                            className="px-10 py-5 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-lg rounded-full shadow-lg transition-all hover:-translate-y-1 active:translate-y-1 cursor-pointer"
                           >
                             Kumpulkan Ujian
                           </button>
@@ -2243,11 +2446,11 @@ export default function DashboardPage() {
 
               {/* FULLSCREEN EXAM OVERLAY (CAT PREPARATION STYLE + PAGING) */}
               {isExamFullscreen && room && (
-                <div className="fixed inset-0 z-50 bg-[#FFBA48] flex flex-col animate-in fade-in duration-300">
+                <div className="fixed inset-0 z-[9999] bg-[#FFF9EE] flex flex-col animate-in fade-in duration-300">
                   {/* Top Header */}
-                  <header className="bg-[#C3631D] border-b-4 border-[#3C632A] py-4 px-8 flex items-center justify-between shadow-md shrink-0">
+                  <header className="bg-gradient-to-r from-[#FFC727] via-[#FFB800] to-[#FFA700] border-b-2 border-amber-300/80 py-4 px-8 flex items-center justify-between shadow-xs shrink-0">
                     <div className="flex items-center space-x-4">
-                      <h2 className="text-xl md:text-2xl font-black text-[#FFDF59] tracking-tight drop-shadow-sm">
+                      <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
                         {room.className} - {room?.exams?.[0]?.title || "Ujian Resmi"}
                       </h2>
                     </div>
@@ -2259,7 +2462,7 @@ export default function DashboardPage() {
                       id="btn-keluar-ujian"
                       data-scan-label="Keluar Ujian"
                       title="Keluar Layar Penuh"
-                      className="px-5 py-3 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-sm md:text-base rounded-xl border-2 border-[#5D3A1A] shadow-sm transition-all flex items-center space-x-2 shrink-0 cursor-pointer"
+                      className="px-5 py-3 bg-rose-50 hover:bg-rose-100 text-rose-600 font-extrabold text-sm md:text-base rounded-xl border border-rose-200 shadow-xs transition-all flex items-center space-x-2 shrink-0 cursor-pointer"
                     >
                       <svg className="w-5 h-5 fill-none stroke-current" strokeWidth="2.5" viewBox="0 0 24 24">
                         <path d="M4 14h6v6M14 4h6v6M20 10l-6-6M10 20l-6-6" strokeLinecap="round" strokeLinejoin="round" />
@@ -2268,7 +2471,7 @@ export default function DashboardPage() {
                     </button>
                   </header>
 
-                  <div className="flex-1 flex overflow-hidden">
+                  <div className="flex-1 flex overflow-hidden bg-[#FFF9EE]" style={{ backgroundImage: "radial-gradient(#F5DCB0 1.5px, transparent 1.5px)", backgroundSize: "24px 24px" }}>
                     {/* Left Main Content (Single Question Paging) */}
                     <main className="flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar flex flex-col">
                       <div className="max-w-4xl mx-auto w-full flex-1 flex flex-col">
@@ -2288,16 +2491,19 @@ export default function DashboardPage() {
                             <div className="flex-1 flex flex-col">
                               <div
                                 key={eq.id}
-                                className="bg-[#C3631D] border-4 border-[#3C632A] rounded-[32px] p-8 md:p-12 shadow-xl space-y-6 flex-1 animate-in fade-in slide-in-from-right-4 duration-300"
+                                className="relative overflow-hidden bg-white/80  border-2 border-white/95 ring-1 ring-amber-200/70 rounded-[32px] p-8 md:p-12 shadow-lg space-y-6 flex-1 animate-in fade-in slide-in-from-right-4 duration-300"
                               >
-                                <div className="flex items-center justify-between pb-4 border-b-2 border-white/20">
-                                  <span className={`px-4 py-2 font-black text-sm rounded-xl uppercase tracking-wider ${isEssay ? "bg-purple-100 text-purple-800" : "bg-white/20 text-[#FFDF59]"
+                                {/* Glass specular accent */}
+                                <div className="absolute -top-16 -right-16 w-44 h-44 bg-gradient-to-bl from-white/90 via-white/20 to-transparent rounded-full blur-[2px] pointer-events-none" />
+
+                                <div className="flex items-center justify-between pb-4 border-b border-amber-100/80 relative z-10">
+                                  <span className={`px-4 py-2 font-black text-sm rounded-xl uppercase tracking-wider ${isEssay ? "bg-purple-100 text-purple-800" : "bg-amber-100 text-amber-900"
                                     }`}>
                                     SOAL {eqIdx + 1} - {isEssay ? `ESSAY / URAIAN` : "PILIHAN GANDA"}
                                   </span>
                                 </div>
 
-                                <h4 className="font-black text-xl md:text-2xl lg:text-3xl text-white drop-shadow-sm leading-snug py-4">
+                                <h4 className="font-black text-xl md:text-2xl lg:text-3xl text-slate-900 leading-snug py-4">
                                   {eq.question}
                                 </h4>
 
@@ -2313,7 +2519,7 @@ export default function DashboardPage() {
                                       disabled={examSubmitted}
                                       placeholder="Tuliskan uraian jawaban di sini..."
                                       rows={6}
-                                      className="w-full p-6 rounded-2xl border-4 border-white/40 focus:border-[#FFDF59] focus:outline-none text-white font-medium text-lg transition-all shadow-inner bg-white/10 placeholder-white/50 disabled:bg-white/5"
+                                      className="w-full p-6 rounded-2xl border-2 border-amber-200/80 focus:border-amber-400 focus:outline-none text-slate-900 font-medium text-lg transition-all shadow-inner bg-slate-50 placeholder-slate-400 disabled:bg-slate-100 disabled:text-slate-400"
                                     />
                                   </div>
                                 ) : (
@@ -2330,12 +2536,12 @@ export default function DashboardPage() {
                                           data-quiz-correct={optIdx === eq.answerIndex ? "true" : "false"}
                                           data-scan-label={`Opsi ${String.fromCharCode(65 + optIdx)}: ${opt}`}
                                           id={`exam-opt-${optIdx}`}
-                                          className={`p-6 rounded-2xl text-lg md:text-xl font-extrabold text-left transition-all border-4 flex items-center space-x-6 cursor-pointer ${isSelected
-                                            ? "bg-[#FFDF59] border-[#3C632A] text-[#5D3A1A] shadow-sm ring-4 ring-[#FFDF59]/30 scale-[1.02]"
-                                            : "bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/40"
+                                          className={`p-6 rounded-2xl text-lg md:text-xl font-extrabold text-left transition-all border-2 flex items-center space-x-6 cursor-pointer ${isSelected
+                                            ? "bg-gradient-to-r from-amber-400 to-amber-500 border-amber-500 text-white shadow-md ring-4 ring-amber-300/40 scale-[1.02]"
+                                            : "bg-white border-amber-200/70 text-slate-700 hover:bg-amber-50 hover:border-amber-300"
                                             }`}
                                         >
-                                          <div className={`w-10 h-10 rounded-full border-4 flex items-center justify-center shrink-0 ${isSelected ? "border-[#5D3A1A] bg-white text-[#5D3A1A]" : "border-white/50 text-white"}`}>
+                                          <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center shrink-0 ${isSelected ? "border-white bg-white text-amber-600 font-black" : "border-amber-200 text-slate-500"}`}>
                                             {String.fromCharCode(65 + optIdx)}
                                           </div>
                                           <span>{opt}</span>
@@ -2353,9 +2559,9 @@ export default function DashboardPage() {
                                   disabled={currentExamQuestionIndex === 0}
                                   id="btn-exam-prev"
                                   data-scan-label="Soal Sebelumnya"
-                                  className={`px-8 py-4 rounded-full font-black text-lg transition-all border-4 cursor-pointer ${currentExamQuestionIndex === 0
-                                    ? "bg-slate-200 text-slate-400 border-slate-300 opacity-50 cursor-not-allowed"
-                                    : "bg-white text-[#5D3A1A] border-[#3C632A] shadow-sm hover:bg-slate-100 active:translate-y-1"
+                                  className={`px-8 py-4 rounded-full font-black text-lg transition-all border-2 cursor-pointer ${currentExamQuestionIndex === 0
+                                    ? "bg-slate-100 text-slate-400 border-slate-200 opacity-50 cursor-not-allowed"
+                                    : "bg-white text-slate-700 border-amber-200 shadow-sm hover:bg-amber-50 active:translate-y-1"
                                     }`}
                                 >
                                   &larr; Soal Sebelumnya
@@ -2366,7 +2572,7 @@ export default function DashboardPage() {
                                     onClick={() => setCurrentExamQuestionIndex(Math.min(exam.questions.length - 1, currentExamQuestionIndex + 1))}
                                     id="btn-exam-next"
                                     data-scan-label="Soal Selanjutnya"
-                                    className="px-8 py-4 bg-[#73B14C] hover:bg-[#3C632A] text-white font-black text-lg rounded-full border-4 border-[#3C632A] shadow-md transition-all active:translate-y-1 cursor-pointer"
+                                    className="px-8 py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-lg rounded-full shadow-md transition-all active:translate-y-1 cursor-pointer"
                                   >
                                     Soal Selanjutnya &rarr;
                                   </button>
@@ -2404,9 +2610,9 @@ export default function DashboardPage() {
                                         });
                                       }
                                     }}
-                                    className={`px-8 py-4 font-black text-lg rounded-full border-4 shadow-md transition-all ${examSubmitted
-                                      ? "bg-slate-300 text-slate-500 border-slate-400 cursor-not-allowed shadow-none translate-y-1"
-                                      : "bg-[#FFDF59] hover:bg-[#FFE296] text-[#5D3A1A] border-[#3C632A] active:translate-y-1"
+                                    className={`px-8 py-4 font-black text-lg rounded-full shadow-md transition-all ${examSubmitted
+                                      ? "bg-slate-200 text-slate-500 cursor-not-allowed shadow-none translate-y-1"
+                                      : "bg-emerald-500 hover:bg-emerald-600 text-white cursor-pointer active:translate-y-1"
                                       }`}
                                   >
                                     {examSubmitted ? "Ujian Telah Terkumpul" : "Kumpulkan Seluruh Jawaban"}
@@ -2419,19 +2625,26 @@ export default function DashboardPage() {
                       </div>
                     </main>
 
-                    {/* Right Sidebar (CAT Style Navigation Grid - BIGGER FONTS) */}
-                    <aside className="w-96 bg-[#FFF4D2] border-l-4 border-[#3C632A] flex flex-col shrink-0 shadow-[-8px_0_20px_rgba(0,0,0,0.15)] z-10 hidden lg:flex">
+                    {/* Right Sidebar (CAT Style Navigation Grid) */}
+                    <aside className="w-96 bg-white border-l-2 border-amber-200 flex flex-col shrink-0 shadow-lg z-10 hidden lg:flex">
                       {/* Timer Widget */}
-                      <div className="p-8 border-b-4 border-[#3C632A] bg-white text-center">
-                        <h4 className="text-base font-black text-[#5D3A1A] uppercase tracking-wider mb-3">
+                      <div className="p-8 border-b-2 border-amber-100 bg-amber-50/50 text-center">
+                        <h4 className="text-base font-black text-slate-700 uppercase tracking-wider mb-3">
                           {userSession?.accessibilityConfig?.mainMode === "intelektual" ? "Status Waktu" : "Sisa Waktu Anda"}
                         </h4>
                         {userSession?.accessibilityConfig?.mainMode === "intelektual" ? (
-                          <div className="text-lg font-black text-[#3C632A] bg-[#FFDF59] py-4 px-2 rounded-2xl border-4 border-[#3C632A] shadow-inner">
+                          <div className="text-lg font-black text-amber-900 bg-white py-4 px-2 rounded-2xl border-2 border-amber-200 shadow-inner">
                             Bebas Waktu (Santai)
                           </div>
+                        ) : !studentRoomTimer?.isActive ? (
+                          <div className="p-4 bg-amber-100/90 border-2 border-amber-300 rounded-2xl text-amber-900 font-black text-xs md:text-sm flex flex-col items-center gap-2 shadow-inner">
+                            <span className="w-3 h-3 rounded-full bg-amber-500 animate-pulse" />
+                            <span>Menunggu Guru Memulai Timer Ujian Room {room.code}</span>
+                          </div>
                         ) : (
-                          <div className="text-4xl font-black text-rose-600 bg-rose-50 py-4 rounded-2xl border-4 border-rose-200 shadow-inner tracking-widest">
+                          <div className={`text-4xl font-black bg-white py-4 rounded-2xl border-2 shadow-inner tracking-widest font-mono ${
+                            examTimer < 300 ? "text-rose-600 border-rose-300 animate-pulse" : "text-rose-600 border-rose-200"
+                          }`}>
                             {formatTime(examTimer)}
                           </div>
                         )}
@@ -2439,7 +2652,7 @@ export default function DashboardPage() {
 
                       {/* Navigation Grid */}
                       <div className="p-8 flex-1 overflow-y-auto custom-scrollbar">
-                        <h4 className="text-base font-black text-[#5D3A1A] uppercase tracking-wider mb-6">Navigasi Pindah Soal</h4>
+                        <h4 className="text-base font-black text-slate-700 uppercase tracking-wider mb-6">Navigasi Pindah Soal</h4>
                         <div className="grid grid-cols-4 gap-4">
                           {(room?.exams?.[0]?.questions || []).map((q, idx) => {
                             const isAnswered = examAnswers[q.id] !== undefined || (examEssayAnswers[q.id] || "").trim() !== "";
@@ -2448,12 +2661,12 @@ export default function DashboardPage() {
                               <button
                                 key={q.id}
                                 onClick={() => setCurrentExamQuestionIndex(idx)}
-                                className={`w-14 h-14 rounded-xl font-black text-xl flex items-center justify-center transition-all border-4 ${isActive
-                                  ? "ring-4 ring-offset-2 ring-[#FFBA48] scale-110 z-10"
+                                className={`w-14 h-14 rounded-xl font-black text-xl flex items-center justify-center transition-all ${isActive
+                                  ? "ring-4 ring-amber-400 border-2 border-amber-400 scale-110 z-10"
                                   : "hover:scale-105"
                                   } ${isAnswered
-                                    ? "bg-[#7FD13B] text-white border-[#3C632A] shadow-sm"
-                                    : "bg-white text-[#5D3A1A] border-slate-300 shadow-sm"
+                                    ? "bg-emerald-500 text-white border-2 border-emerald-600 shadow-sm"
+                                    : "bg-white text-slate-700 border-2 border-amber-200 shadow-xs"
                                   }`}
                               >
                                 {idx + 1}
@@ -2462,19 +2675,19 @@ export default function DashboardPage() {
                           })}
                         </div>
 
-                        {/* Legend - Bigger text */}
+                        {/* Legend */}
                         <div className="mt-10 space-y-4">
                           <div className="flex items-center space-x-4">
-                            <div className="w-8 h-8 bg-[#7FD13B] border-4 border-[#3C632A] rounded-lg shrink-0"></div>
-                            <span className="text-base font-bold text-[#5D3A1A]">Sudah Terjawab</span>
+                            <div className="w-8 h-8 bg-emerald-500 border-2 border-emerald-600 rounded-lg shrink-0"></div>
+                            <span className="text-base font-bold text-slate-700">Sudah Terjawab</span>
                           </div>
                           <div className="flex items-center space-x-4">
-                            <div className="w-8 h-8 bg-white border-4 border-slate-300 rounded-lg shrink-0"></div>
-                            <span className="text-base font-bold text-[#5D3A1A]">Belum Terjawab</span>
+                            <div className="w-8 h-8 bg-white border-2 border-amber-200 rounded-lg shrink-0"></div>
+                            <span className="text-base font-bold text-slate-700">Belum Terjawab</span>
                           </div>
                           <div className="flex items-center space-x-4 pt-2">
-                            <div className="w-8 h-8 border-4 border-[#FFBA48] rounded-lg shrink-0 flex items-center justify-center font-black">X</div>
-                            <span className="text-base font-bold text-[#5D3A1A]">Soal Saat Ini</span>
+                            <div className="w-8 h-8 border-2 border-amber-400 rounded-lg shrink-0 flex items-center justify-center font-black text-amber-600">X</div>
+                            <span className="text-base font-bold text-slate-700">Soal Saat Ini</span>
                           </div>
                         </div>
                       </div>
@@ -2488,12 +2701,17 @@ export default function DashboardPage() {
 
         {/* VIEW 3: AKSES GURU */}
         {activeTab === "guru" && (
-          <div className="flex-1 bg-[#FFBA48] rounded-[32px] p-8 mt-24 mr-6 ml-6 mb-10 shadow-xl flex flex-col relative overflow-hidden animate-in fade-in duration-300 border-4 border-white/20">
-            <main className="flex-1 w-full overflow-y-auto custom-scrollbar pr-4 space-y-10">
+          <div className="flex-1 bg-gradient-to-br from-white/50 via-white/35 to-amber-50/20 rounded-[36px] p-8 mt-24 mr-6 ml-6 mb-10 shadow-[0_16px_40px_rgba(217,119,6,0.06)] flex flex-col relative animate-in fade-in duration-300 border border-white/80 ring-1 ring-amber-200/50">
+            {/* Specular Light Flare */}
+            <div className="absolute -top-[1.5px] left-1/2 -translate-x-1/2 w-64 md:w-96 h-[3px] bg-white rounded-full shadow-[0_0_12px_2px_rgba(255,255,255,0.9)] pointer-events-none" />
+            {/* Glass highlight band */}
+            <div className="absolute top-0 left-0 right-0 h-36 bg-gradient-to-b from-white/40 via-white/10 to-transparent pointer-events-none rounded-t-[34px]" />
+
+            <main className="w-full space-y-10 relative z-10">
               {userSession?.role === "siswa" ? (
                 /* Tampilan Akses Terkunci Jika Login Sebagai Siswa */
-                <div className="bg-white border-2 border-slate-200 rounded-xl p-8 md:p-14 shadow-sm text-center space-y-6 my-6">
-                  <div className="w-20 h-20 bg-slate-100 border-2 border-slate-300 text-slate-700 rounded-xl flex items-center justify-center mx-auto shadow-[0_4px_12px_rgba(0,0,0,0.05)]">
+                <div className="bg-white border-2 border-amber-200/80 rounded-2xl p-8 md:p-14 shadow-sm text-center space-y-6 my-6">
+                  <div className="w-20 h-20 bg-amber-50 border-2 border-amber-200 text-amber-700 rounded-2xl flex items-center justify-center mx-auto shadow-xs">
                     <svg className="w-10 h-10 stroke-current fill-none" strokeWidth="2" viewBox="0 0 24 24">
                       <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                       <path d="M7 11V7a5 5 0 0110 0v4" />
@@ -2503,7 +2721,7 @@ export default function DashboardPage() {
                     <span className="px-3.5 py-1 bg-rose-100 text-rose-800 text-xs font-black rounded-full uppercase tracking-wider">
                       Akses Terkunci
                     </span>
-                    <h3 className="text-2xl md:text-3xl font-black text-[#5D3A1A] drop-shadow-sm">
+                    <h3 className="text-2xl md:text-3xl font-black text-slate-900">
                       Khusus Pengajar & Guru
                     </h3>
                   </div>
@@ -2511,7 +2729,7 @@ export default function DashboardPage() {
                     <button
                       type="button"
                       onClick={() => setActiveTab("katalog")}
-                      className="w-full sm:w-auto px-6 py-4 bg-[#73B14C] hover:bg-[#3C632A] text-white font-black text-sm md:text-base rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.05)] transition-all cursor-pointer"
+                      className="w-full sm:w-auto px-6 py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-sm md:text-base rounded-xl shadow-sm transition-all cursor-pointer"
                     >
                       Kembali
                     </button>
@@ -2521,14 +2739,14 @@ export default function DashboardPage() {
                 <>
                   {/* Guru Action Toast Banner */}
                   {guruToast && (
-                    <div className="p-5 bg-[#73B14C] text-[#5D3A1A] font-extrabold text-base md:text-lg rounded-xl shadow-xl flex items-center justify-between border-2 border-white/20 animate-in slide-in-from-top-4">
+                    <div className="p-5 bg-emerald-500 text-white font-extrabold text-base md:text-lg rounded-2xl shadow-lg flex items-center justify-between border border-emerald-400 animate-in slide-in-from-top-4">
                       <div className="flex items-center space-x-3">
-                        <span className="w-3.5 h-3.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
+                        <span className="w-3.5 h-3.5 rounded-full bg-white animate-ping shrink-0" />
                         <span>{guruToast}</span>
                       </div>
                       <button
                         onClick={() => setGuruToast("")}
-                        className="text-white hover:text-slate-200 text-xs md:text-sm font-black bg-white/10 px-4 py-1.5 rounded-xl cursor-pointer"
+                        className="text-white hover:text-slate-100 text-xs md:text-sm font-black bg-white/20 px-4 py-1.5 rounded-xl cursor-pointer"
                       >
                         Tutup
                       </button>
@@ -2536,19 +2754,19 @@ export default function DashboardPage() {
                   )}
 
                   {/* Teacher Portal Main Hero Header Card (DENGAN SELECTOR ROOM AKTIF DINAMIS) */}
-                  <div className="bg-[#C3631D] border-4 border-[#3C632A] rounded-[32px] p-8 md:p-10 shadow-xl flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8 mb-8">
+                  <div className="bg-gradient-to-r from-[#FFC727] via-[#FFB800] to-[#FFA700] border-2 border-amber-300 rounded-[32px] p-8 md:p-10 shadow-md flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8 mb-8">
                     <div className="space-y-3 max-w-2xl">
-                      <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-[#FFDF59] tracking-tight leading-tight drop-shadow-md">
+                      <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-tight">
                         Akses & Manajemen Room Guru
                       </h2>
-                      <p className="text-sm md:text-base text-white font-bold leading-relaxed">
+                      <p className="text-sm md:text-base text-slate-800 font-bold leading-relaxed">
                         Kelola room kelas, generate kode akses unik, unggah materi pembelajaran dengan pembuat kuis & study cards otomatis, serta publikasikan ujian resmi yang mendukung soal Pilihan Ganda & Essay.
                       </p>
                     </div>
 
                     {/* Selector Room Aktif Yang Dikelola Guru (Dinamis Sesuai Room Yang Dibuat) */}
-                    <div className="bg-[#C3631D] border-4 border-[#3C632A] rounded-2xl p-5 md:p-6 w-full lg:w-auto shrink-0 space-y-3 shadow-md relative z-10">
-                      <div className="text-xs md:text-sm font-black text-[#FFDF59] uppercase tracking-wider">
+                    <div className="bg-white/95 border-2 border-amber-300 rounded-2xl p-5 md:p-6 w-full lg:w-auto shrink-0 space-y-3 shadow-sm relative z-10">
+                      <div className="text-xs md:text-sm font-black text-slate-900 uppercase tracking-wider">
                         Room Yang Dikelola:
                       </div>
                       <div className="flex flex-col sm:flex-row items-center gap-3">
@@ -2566,7 +2784,7 @@ export default function DashboardPage() {
                               setNewTeacherName(selR.teacherName);
                             }
                           }}
-                          className="px-4 py-3 bg-white/10 border-2 border-white/20 text-white rounded-xl text-sm md:text-base font-black uppercase focus:outline-none focus:border-[#FFDF59] cursor-pointer w-full sm:w-auto transition-colors"
+                          className="px-4 py-3 bg-white border-2 border-amber-200/80 text-slate-800 rounded-xl text-sm md:text-base font-black uppercase focus:outline-none focus:border-amber-400 cursor-pointer w-full sm:w-auto transition-colors"
                         >
                           {getAllClassRooms().map((r) => (
                             <option key={r.code} value={r.code} className="text-slate-900 font-black">
@@ -2580,13 +2798,13 @@ export default function DashboardPage() {
                             navigator.clipboard?.writeText(teacherRoomCode);
                             showGuruToast(`Kode room "${teacherRoomCode}" berhasil disalin ke clipboard!`);
                           }}
-                          className="px-5 py-3 bg-[#73B14C] hover:bg-[#3C632A] text-white font-black text-xs md:text-sm rounded-xl border-4 border-[#3C632A] shadow-md transition-colors cursor-pointer shrink-0 w-full sm:w-auto active:translate-y-1"
+                          className="px-5 py-3 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-white font-black text-xs md:text-sm rounded-xl shadow-sm transition-all cursor-pointer shrink-0 w-full sm:w-auto active:translate-y-1"
                         >
                           Salin Kode
                         </button>
                       </div>
-                      <p className="text-xs font-bold text-white flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse border border-[#3C632A]" />
+                      <p className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse border border-emerald-400" />
                         <span>Status: Room Terhubung & Aktif</span>
                       </p>
                     </div>
@@ -2598,7 +2816,7 @@ export default function DashboardPage() {
                     <button
                       onClick={() => setGuruTab("room")}
                       className={`px-6 py-4 rounded-xl font-black text-sm md:text-base lg:text-lg transition-all whitespace-nowrap cursor-pointer ${guruTab === "room"
-                        ? "bg-[#73B14C] text-white shadow-[0_4px_12px_rgba(0,0,0,0.05)] shadow-[0_4px_12px_rgba(0,0,0,0.05)]"
+                        ? "bg-amber-500 text-slate-950 shadow-xs"
                         : "bg-white text-slate-700 hover:bg-slate-100 border-2 border-slate-200"
                         }`}
                     >
@@ -2607,8 +2825,8 @@ export default function DashboardPage() {
                     <button
                       onClick={() => setGuruTab("siswa")}
                       className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap ${guruTab === "siswa"
-                        ? "bg-[#FFBA48] text-[#3C632A] shadow-md border-2 border-[#3C632A]"
-                        : "text-slate-600 hover:bg-[#FFE296] border-2 border-transparent"
+                        ? "bg-amber-100/80 text-amber-900 shadow-xs border-2 border-amber-300"
+                        : "text-slate-600 hover:bg-amber-50 border-2 border-transparent"
                         }`}
                     >
                       Kelola Siswa
@@ -2616,8 +2834,8 @@ export default function DashboardPage() {
                     <button
                       onClick={() => setGuruTab("daftar_siswa")}
                       className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap ${guruTab === "daftar_siswa"
-                        ? "bg-[#FFBA48] text-[#3C632A] shadow-md border-2 border-[#3C632A]"
-                        : "text-slate-600 hover:bg-[#FFE296] border-2 border-transparent"
+                        ? "bg-amber-100/80 text-amber-900 shadow-xs border-2 border-amber-300"
+                        : "text-slate-600 hover:bg-amber-50 border-2 border-transparent"
                         }`}
                     >
                       Daftar Siswa
@@ -2636,7 +2854,7 @@ export default function DashboardPage() {
                       className={`px-6 py-4 rounded-xl font-black text-sm md:text-base lg:text-lg transition-all whitespace-nowrap flex items-center space-x-2.5 ${!hasCreatedRoom
                         ? "bg-slate-100 border-2 border-slate-200 text-slate-600 opacity-60 cursor-not-allowed"
                         : guruTab === "materi"
-                          ? "bg-[#73B14C] text-white shadow-[0_4px_12px_rgba(0,0,0,0.05)] shadow-[0_4px_12px_rgba(0,0,0,0.05)] cursor-pointer"
+                          ? "bg-amber-500 text-slate-950 shadow-xs cursor-pointer"
                           : "bg-white text-slate-700 hover:bg-slate-100 border-2 border-slate-200 cursor-pointer"
                         }`}
                     >
@@ -2658,7 +2876,7 @@ export default function DashboardPage() {
                       className={`px-6 py-4 rounded-xl font-black text-sm md:text-base lg:text-lg transition-all whitespace-nowrap flex items-center space-x-2.5 ${!hasCreatedRoom
                         ? "bg-slate-100 border-2 border-slate-200 text-slate-600 opacity-60 cursor-not-allowed"
                         : guruTab === "ujian"
-                          ? "bg-[#73B14C] text-white shadow-[0_4px_12px_rgba(0,0,0,0.05)] shadow-[0_4px_12px_rgba(0,0,0,0.05)] cursor-pointer"
+                          ? "bg-amber-500 text-slate-950 shadow-xs cursor-pointer"
                           : "bg-white text-slate-700 hover:bg-slate-100 border-2 border-slate-200 cursor-pointer"
                         }`}
                     >
@@ -2680,7 +2898,7 @@ export default function DashboardPage() {
                       className={`px-6 py-4 rounded-xl font-black text-sm md:text-base lg:text-lg transition-all whitespace-nowrap flex items-center space-x-2.5 ${!hasCreatedRoom
                         ? "bg-slate-100 border-2 border-slate-200 text-slate-600 opacity-60 cursor-not-allowed"
                         : guruTab === "rekap"
-                          ? "bg-[#73B14C] text-white shadow-[0_4px_12px_rgba(0,0,0,0.05)] shadow-[0_4px_12px_rgba(0,0,0,0.05)] cursor-pointer"
+                          ? "bg-amber-500 text-slate-950 shadow-xs cursor-pointer"
                           : "bg-white text-slate-700 hover:bg-slate-100 border-2 border-slate-200 cursor-pointer"
                         }`}
                     >
@@ -2695,11 +2913,14 @@ export default function DashboardPage() {
 
                   {/* GURU SUB-TAB: KELOLA SISWA (PENDAFTARAN SISWA) */}
                   {guruTab === "siswa" && (
-                    <div className="bg-[#FFDF59] border-4 border-[#3C632A] rounded-[32px] p-8 md:p-12 shadow-xl space-y-8 animate-in fade-in duration-200 mt-6">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b-4 border-[#3C632A]/20 pb-6">
+                    <div className="relative overflow-hidden bg-gradient-to-b from-white/55 via-white/40 to-white/45 border border-white/85 ring-1 ring-amber-200/50 rounded-[32px] p-8 md:p-12 shadow-[0_12px_28px_-8px_rgba(217,119,6,0.08),inset_0_1.5px_1px_rgba(255,255,255,0.95)] space-y-8 animate-in fade-in duration-200 mt-6">
+                      {/* Specular Light Flare */}
+                      <div className="absolute -top-[1.5px] left-1/2 -translate-x-1/2 w-64 h-[3px] bg-white rounded-full shadow-[0_0_16px_5px_rgba(255,255,255,1)] pointer-events-none" />
+                      <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-white/45 via-white/10 to-transparent pointer-events-none rounded-t-[30px]" />
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-amber-100 pb-6">
                         <div>
-                          <h2 className="text-2xl md:text-3xl font-black text-[#5D3A1A] drop-shadow-sm">Kelola Murid & Pendaftaran Akun</h2>
-                          <p className="text-sm md:text-base text-[#5D3A1A]/80 font-bold mt-1">
+                          <h2 className="text-2xl md:text-3xl font-black text-slate-900">Kelola Murid & Pendaftaran Akun</h2>
+                          <p className="text-sm md:text-base text-slate-600 font-medium mt-1">
                             Daftarkan murid satu per satu atau import data kolektif sekaligus menggunakan file Excel.
                           </p>
                         </div>
@@ -2717,7 +2938,7 @@ export default function DashboardPage() {
                             type="button"
                             onClick={() => excelFileInputRef.current?.click()}
                             disabled={excelImportLoading}
-                            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs md:text-sm rounded-xl border-2 border-[#3C632A] shadow-sm flex items-center gap-2 transition-all cursor-pointer active:translate-y-0.5"
+                            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs md:text-sm rounded-xl border border-emerald-700 shadow-sm flex items-center gap-2 transition-all cursor-pointer active:translate-y-0.5"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
                             <span>{excelImportLoading ? "Mengimpor..." : "Import dari File Excel"}</span>
@@ -2726,7 +2947,7 @@ export default function DashboardPage() {
                           <button
                             type="button"
                             onClick={downloadExcelTemplate}
-                            className="px-4 py-2.5 bg-white hover:bg-slate-100 text-[#5D3A1A] font-black text-xs md:text-sm rounded-xl border-2 border-[#3C632A] shadow-sm flex items-center gap-2 transition-all cursor-pointer active:translate-y-0.5"
+                            className="px-4 py-2.5 bg-white hover:bg-amber-50 text-slate-800 font-black text-xs md:text-sm rounded-xl border border-amber-300 shadow-sm flex items-center gap-2 transition-all cursor-pointer active:translate-y-0.5"
                           >
                             <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                             <span>Unduh Template Excel</span>
@@ -2735,7 +2956,7 @@ export default function DashboardPage() {
                           <button
                             type="button"
                             onClick={() => setGuruTab("daftar_siswa")}
-                            className="px-4 py-2.5 bg-[#FFBA48] hover:bg-[#FFA500] text-[#5D3A1A] font-black text-xs md:text-sm rounded-xl border-2 border-[#3C632A] shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:translate-y-0.5"
+                            className="px-4 py-2.5 bg-amber-100 hover:bg-amber-200 text-amber-900 font-black text-xs md:text-sm rounded-xl border border-amber-300 shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:translate-y-0.5"
                           >
                             <span>Lihat Tabel Daftar Siswa →</span>
                           </button>
@@ -2782,7 +3003,7 @@ export default function DashboardPage() {
                       >
                         {/* 1. KODE KELAS */}
                         <div>
-                          <label className="block font-black text-[#5D3A1A] drop-shadow-sm mb-2">Kode Kelas</label>
+                          <label className="block font-black text-slate-800 mb-2">Kode Kelas</label>
                           <input
                             type="text"
                             required
@@ -2792,26 +3013,26 @@ export default function DashboardPage() {
                               setStudentFormClassCode(val);
                               localStorage.setItem("pintara_sticky_class_code", val);
                             }}
-                            className="w-full px-4 py-3 bg-[#F8F9FA] border-4 border-[#3C632A] rounded-xl font-bold text-[#5D3A1A] uppercase"
+                            className="w-full px-4 py-3 bg-slate-50 border-2 border-amber-200/80 focus:border-amber-400 focus:outline-none rounded-xl font-bold text-slate-800 uppercase shadow-inner"
                             placeholder="Misal: SD4B"
                           />
                         </div>
 
                         {/* 2. NAMA MURID */}
                         <div>
-                          <label className="block font-black text-[#5D3A1A] drop-shadow-sm mb-2">Nama Murid</label>
+                          <label className="block font-black text-slate-800 mb-2">Nama Murid</label>
                           <input
                             name="studentName"
                             required
-                            className="w-full px-4 py-3 bg-[#F8F9FA] border-4 border-[#3C632A] rounded-xl font-bold text-[#5D3A1A]"
+                            className="w-full px-4 py-3 bg-slate-50 border-2 border-amber-200/80 focus:border-amber-400 focus:outline-none rounded-xl font-bold text-slate-800 shadow-inner"
                             placeholder="Misal: Budi Santoso"
                           />
                         </div>
 
                         {/* 3. JENJANG SD */}
                         <div>
-                          <label className="block font-black text-[#5D3A1A] drop-shadow-sm mb-2">Kelas / Jenjang SD Murid</label>
-                          <select name="studentJenjang" className="w-full px-4 py-3 bg-[#F8F9FA] border-4 border-[#3C632A] rounded-xl font-bold text-[#5D3A1A]">
+                          <label className="block font-black text-slate-800 mb-2">Kelas / Jenjang SD Murid</label>
+                          <select name="studentJenjang" className="w-full px-4 py-3 bg-slate-50 border-2 border-amber-200/80 focus:border-amber-400 focus:outline-none rounded-xl font-bold text-slate-800 shadow-inner">
                             <option value="Kelas 1 SD">Kelas 1 SD</option>
                             <option value="Kelas 2 SD">Kelas 2 SD</option>
                             <option value="Kelas 3 SD">Kelas 3 SD</option>
@@ -2823,12 +3044,12 @@ export default function DashboardPage() {
 
                         {/* 4. PRESET AKSESIBILITAS */}
                         <div>
-                          <label className="block font-black text-[#5D3A1A] drop-shadow-sm mb-2">Mode Aksesibilitas Khusus</label>
+                          <label className="block font-black text-slate-800 mb-2">Mode Aksesibilitas Khusus</label>
                           <select
                             name="preset"
                             value={newStudentPreset}
                             onChange={(e) => setNewStudentPreset(e.target.value)}
-                            className="w-full px-4 py-3 bg-[#F8F9FA] border-4 border-[#3C632A] rounded-xl font-bold text-[#5D3A1A]"
+                            className="w-full px-4 py-3 bg-slate-50 border-2 border-amber-200/80 focus:border-amber-400 focus:outline-none rounded-xl font-bold text-slate-800 shadow-inner"
                           >
                             <option value="fisik_motorik_tremor">Fisik - Motorik Halus (Anti-Tremor / Tahan)</option>
                             <option value="fisik_motorik_switch">Fisik - Motorik Halus (Sakelar Tunggal / Auto-Scan)</option>
@@ -2842,11 +3063,9 @@ export default function DashboardPage() {
                           </select>
                         </div>
 
-                        {/* Avatar dihapus sesuai instruksi */}
-
                         <button
                           type="submit"
-                          className="px-6 py-4 bg-[#73B14C] hover:bg-[#3C632A] text-white border-4 border-[#3C632A] shadow-md hover:shadow-lg font-black rounded-full text-xl transition-all w-full cursor-pointer active:translate-y-1"
+                          className="px-6 py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-full text-xl shadow-md hover:shadow-lg transition-all w-full cursor-pointer active:translate-y-1"
                         >
                           Simpan Siswa
                         </button>
@@ -2856,19 +3075,19 @@ export default function DashboardPage() {
 
                   {/* GURU SUB-TAB: DAFTAR SISWA (MASTER VIEW GURU) */}
                   {guruTab === "daftar_siswa" && (
-                    <div className="bg-[#FFDF59] border-4 border-[#3C632A] rounded-[32px] p-6 md:p-10 shadow-xl space-y-6 animate-in fade-in duration-200 mt-6">
+                    <div className="relative overflow-hidden bg-white/75  border-2 border-white/95 ring-1 ring-amber-200/60 rounded-[32px] p-6 md:p-10 shadow-md space-y-6 animate-in fade-in duration-200 mt-6">
                       {/* HEADER & ACTION BUTTONS */}
-                      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b-4 border-[#3C632A]/20 pb-6">
+                      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-amber-100 pb-6">
                         <div>
                           <div className="flex items-center gap-2.5">
-                            <h2 className="text-2xl md:text-3xl font-black text-[#5D3A1A] drop-shadow-sm">
+                            <h2 className="text-2xl md:text-3xl font-black text-slate-900">
                               Daftar Siswa & Manajemen Akun
                             </h2>
-                            <span className="px-3 py-1 bg-[#3C632A] text-[#FFFFDB] text-xs font-black rounded-full uppercase tracking-wider">
+                            <span className="px-3 py-1 bg-amber-100 text-amber-900 text-xs font-black rounded-full uppercase tracking-wider border border-amber-300">
                               Master View
                             </span>
                           </div>
-                          <p className="text-sm md:text-base text-[#5D3A1A]/80 font-bold mt-1">
+                          <p className="text-sm md:text-base text-slate-600 font-medium mt-1">
                             Lihat akun murid, salin akses WhatsApp wali murid, reset PIN secara instan, dan cetak kartu akun kelas.
                           </p>
                         </div>
@@ -2888,7 +3107,7 @@ export default function DashboardPage() {
                               }
                               printClassAccountSummary(toPrint, targetRoom);
                             }}
-                            className="px-6 py-3.5 bg-[#73B14C] hover:bg-[#3C632A] text-white border-4 border-[#3C632A] rounded-2xl font-black text-sm md:text-base shadow-md hover:shadow-lg flex items-center gap-2.5 transition-all cursor-pointer active:translate-y-1"
+                            className="px-6 py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black text-sm md:text-base shadow-sm hover:shadow-md flex items-center gap-2.5 transition-all cursor-pointer active:translate-y-1"
                           >
                             <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
                             <span>Cetak Rekap Akun Kelas</span>
@@ -2897,7 +3116,7 @@ export default function DashboardPage() {
                           <button
                             type="button"
                             onClick={() => setGuruTab("siswa")}
-                            className="px-5 py-3.5 bg-white hover:bg-slate-100 text-[#5D3A1A] border-4 border-[#3C632A] rounded-2xl font-black text-sm md:text-base shadow-md hover:shadow-lg flex items-center gap-2 transition-all cursor-pointer active:translate-y-1"
+                            className="px-5 py-3.5 bg-white hover:bg-amber-50 text-slate-800 border-2 border-amber-200/80 rounded-2xl font-black text-sm md:text-base shadow-xs hover:shadow-sm flex items-center gap-2 transition-all cursor-pointer active:translate-y-1"
                           >
                             <span>+ Tambah Murid</span>
                           </button>
@@ -2905,7 +3124,7 @@ export default function DashboardPage() {
                       </div>
 
                       {/* FILTER & PENCARIAN BAR */}
-                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-white/40 border-2 border-[#3C632A]/30 p-4 rounded-2xl">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-amber-50/50 border border-amber-200/80 p-4 rounded-2xl">
                         <div className="flex-1 flex items-center gap-3">
                           <div className="relative flex-1 max-w-md">
                             <input
@@ -2913,17 +3132,17 @@ export default function DashboardPage() {
                               value={studentSearchQuery}
                               onChange={(e) => setStudentSearchQuery(e.target.value)}
                               placeholder="Cari nama murid atau PIN..."
-                              className="w-full pl-10 pr-4 py-2.5 bg-white border-2 border-[#3C632A] rounded-xl font-bold text-sm text-[#5D3A1A] placeholder-[#5D3A1A]/40 focus:outline-none focus:ring-2 focus:ring-[#73B14C]"
+                              className="w-full pl-10 pr-4 py-2.5 bg-white border border-amber-200 rounded-xl font-bold text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400 shadow-xs"
                             />
-                            <svg className="w-5 h-5 text-[#5D3A1A]/60 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                            <svg className="w-5 h-5 text-amber-700 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                           </div>
 
                           <div className="shrink-0 flex items-center gap-2">
-                            <label className="text-xs font-black text-[#5D3A1A] uppercase tracking-wide hidden sm:inline">Room:</label>
+                            <label className="text-xs font-black text-slate-700 uppercase tracking-wide hidden sm:inline">Room:</label>
                             <select
                               value={studentRoomFilter}
                               onChange={(e) => setStudentRoomFilter(e.target.value)}
-                              className="px-3 py-2.5 bg-white border-2 border-[#3C632A] rounded-xl font-bold text-xs md:text-sm text-[#5D3A1A] focus:outline-none"
+                              className="px-3 py-2.5 bg-white border border-amber-200 rounded-xl font-bold text-xs md:text-sm text-slate-800 focus:outline-none shadow-xs"
                             >
                               <option value="">Semua Room Kelas</option>
                               {Array.from(new Set(studentsList.map((s) => s.current_room_code).filter(Boolean))).map((code) => (
@@ -2934,16 +3153,16 @@ export default function DashboardPage() {
                         </div>
 
                         <div className="shrink-0 text-right">
-                          <span className="text-xs md:text-sm font-black text-[#5D3A1A] bg-white px-3.5 py-1.5 rounded-full border-2 border-[#3C632A]">
+                          <span className="text-xs md:text-sm font-black text-slate-700 bg-white px-3.5 py-1.5 rounded-full border border-amber-200 shadow-xs">
                             Total: <strong>{studentsList.filter((s) => !studentRoomFilter || s.current_room_code?.toUpperCase() === studentRoomFilter.toUpperCase()).length}</strong> Siswa
                           </span>
                         </div>
                       </div>
 
                       {/* TABEL RESPONSIVE */}
-                      <div className="overflow-x-auto bg-white border-4 border-[#3C632A] rounded-2xl shadow-md">
+                      <div className="overflow-x-auto bg-white border border-amber-200 rounded-2xl shadow-sm">
                         {isStudentsLoading ? (
-                          <div className="py-16 text-center text-[#5D3A1A] font-bold text-lg">
+                          <div className="py-16 text-center text-slate-600 font-bold text-lg">
                             Memuat data siswa...
                           </div>
                         ) : (() => {
@@ -2961,17 +3180,17 @@ export default function DashboardPage() {
                           if (filtered.length === 0) {
                             return (
                               <div className="py-16 px-6 text-center space-y-4">
-                                <div className="w-16 h-16 mx-auto bg-amber-100 rounded-full flex items-center justify-center text-[#3C632A]">
+                                <div className="w-16 h-16 mx-auto bg-amber-100 rounded-full flex items-center justify-center text-amber-700">
                                   <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
                                 </div>
-                                <h4 className="text-xl font-black text-[#5D3A1A]">Belum Ada Akun Siswa Ditemukan</h4>
-                                <p className="text-sm font-bold text-[#5D3A1A]/70 max-w-md mx-auto">
+                                <h4 className="text-xl font-black text-slate-900">Belum Ada Akun Siswa Ditemukan</h4>
+                                <p className="text-sm font-medium text-slate-600 max-w-md mx-auto">
                                   Belum ada siswa yang terdaftar di room ini atau hasil pencarian tidak cocok. Silakan tambahkan murid atau import file Excel.
                                 </p>
                                 <button
                                   type="button"
                                   onClick={() => setGuruTab("siswa")}
-                                  className="px-6 py-2.5 bg-[#73B14C] hover:bg-[#3C632A] text-white font-black text-sm rounded-xl border-2 border-[#3C632A] shadow-sm"
+                                  className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-sm rounded-xl shadow-sm"
                                 >
                                   + Tambahkan Murid Baru Sekarang
                                 </button>
@@ -2982,7 +3201,7 @@ export default function DashboardPage() {
                           return (
                             <table className="w-full text-left border-collapse">
                               <thead>
-                                <tr className="bg-[#3C632A] text-[#FFFFDB] uppercase text-xs md:text-sm font-black tracking-wider">
+                                <tr className="bg-amber-50 border-b border-amber-200 text-slate-700 uppercase text-xs md:text-sm font-black tracking-wider">
                                   <th className="py-4 px-4 w-12 text-center">No</th>
                                   <th className="py-4 px-4">Nama Siswa</th>
                                   <th className="py-4 px-4">Preset Aksesibilitas</th>
@@ -2991,16 +3210,16 @@ export default function DashboardPage() {
                                   <th className="py-4 px-4 text-center">Aksi</th>
                                 </tr>
                               </thead>
-                              <tbody className="divide-y-2 divide-slate-100 font-bold text-sm text-[#5D3A1A]">
+                              <tbody className="divide-y divide-amber-100 font-medium text-sm text-slate-800">
                                 {filtered.map((student, idx) => (
-                                  <tr key={student.id} className="hover:bg-[#FFDF59]/20 transition-colors">
-                                    <td className="py-4 px-4 text-center font-black text-slate-400">
+                                  <tr key={student.id} className="hover:bg-amber-50/50 transition-colors">
+                                    <td className="py-4 px-4 text-center font-bold text-slate-400">
                                       {idx + 1}
                                     </td>
 
                                     {/* 1. Nama Siswa */}
                                     <td className="py-4 px-4">
-                                      <div className="font-black text-base text-[#0f172a]">{student.full_name}</div>
+                                      <div className="font-black text-base text-slate-900">{student.full_name}</div>
                                       <div className="text-xs text-slate-500 font-semibold mt-0.5">
                                         {student.jenjang || "Kelas 4 SD"}
                                       </div>
@@ -3008,21 +3227,21 @@ export default function DashboardPage() {
 
                                     {/* 2. Preset Aksesibilitas */}
                                     <td className="py-4 px-4">
-                                      <span className="inline-flex items-center px-3 py-1 bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-full text-xs font-extrabold">
+                                      <span className="inline-flex items-center px-3 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-xs font-bold">
                                         {getA11yPresetLabel(student.accessibility_config)}
                                       </span>
                                     </td>
 
                                     {/* 3. Kode Kelas */}
                                     <td className="py-4 px-4">
-                                      <span className="font-mono font-black text-sm px-3 py-1 bg-slate-100 text-slate-800 border border-slate-300 rounded-lg">
+                                      <span className="font-mono font-bold text-sm px-3 py-1 bg-slate-100 text-slate-700 border border-slate-200 rounded-lg">
                                         {student.current_room_code || teacherRoomCode}
                                       </span>
                                     </td>
 
                                     {/* 4. PIN Siswa */}
                                     <td className="py-4 px-4">
-                                      <span className="font-mono font-black text-base px-3.5 py-1 bg-amber-100 text-[#C3631D] border-2 border-[#C3631D] rounded-lg tracking-widest shadow-sm">
+                                      <span className="font-mono font-black text-base px-3.5 py-1 bg-amber-50 text-amber-900 border border-amber-300 rounded-lg tracking-widest shadow-xs">
                                         {student.pin_code || student.accessibility_config?.pin_code || "----"}
                                       </span>
                                     </td>
@@ -3038,7 +3257,7 @@ export default function DashboardPage() {
                                             navigator.clipboard?.writeText(text);
                                             showGuruToast(`Format WhatsApp untuk ${student.full_name} berhasil disalin!`);
                                           }}
-                                          className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:translate-y-0.5"
+                                          className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition-all cursor-pointer active:translate-y-0.5"
                                           title="Salin format teks siap kirim ke WhatsApp wali murid"
                                         >
                                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
@@ -3068,7 +3287,7 @@ export default function DashboardPage() {
                                               showGuruToast(`PIN ${student.full_name} berhasil di-reset menjadi: ${newPin}`);
                                             }
                                           }}
-                                          className="px-3.5 py-2 bg-[#FFBA48] hover:bg-[#FFA500] text-[#5D3A1A] font-extrabold text-xs rounded-xl border-2 border-[#3C632A] shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:translate-y-0.5"
+                                          className="px-3.5 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 font-extrabold text-xs rounded-xl border border-amber-300 shadow-xs flex items-center gap-1.5 transition-all cursor-pointer active:translate-y-0.5"
                                           title="Generate PIN acak baru secara instan jika terjadi kompromi keamanan"
                                         >
                                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
@@ -3085,7 +3304,7 @@ export default function DashboardPage() {
                                               showGuruToast(`Data murid ${student.full_name} berhasil dihapus.`);
                                             }
                                           }}
-                                          className="w-[34px] h-[34px] flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl border border-rose-300 transition-all cursor-pointer shrink-0"
+                                          className="w-[34px] h-[34px] flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl border border-rose-200 transition-all cursor-pointer shrink-0"
                                           title="Hapus murid"
                                         >
                                           <svg className="w-4 h-4 shrink-0 block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
@@ -3103,20 +3322,23 @@ export default function DashboardPage() {
                   )}
 
                   {guruTab === "materi" && (
-                    <div className="bg-[#FFDF59] border-4 border-[#3C632A] rounded-[32px] p-8 md:p-12 shadow-xl space-y-8 animate-in fade-in duration-200 mt-6">
+                    <div className="relative overflow-hidden bg-gradient-to-b from-white/55 via-white/40 to-white/45 border border-white/85 ring-1 ring-amber-200/50 rounded-[32px] p-8 md:p-12 shadow-[0_12px_28px_-8px_rgba(217,119,6,0.08),inset_0_1.5px_1px_rgba(255,255,255,0.95)] space-y-8 animate-in fade-in duration-200 mt-6">
+                      {/* Specular Light Flare */}
+                      <div className="absolute -top-[1.5px] left-1/2 -translate-x-1/2 w-64 h-[3px] bg-white rounded-full shadow-[0_0_16px_5px_rgba(255,255,255,1)] pointer-events-none" />
+                      <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-white/45 via-white/10 to-transparent pointer-events-none rounded-t-[30px]" />
                       <div>
-                        <h3 className="text-2xl md:text-3xl font-black text-[#5D3A1A] drop-shadow-sm">Upload Materi Pembelajaran</h3>
-                        <p className="text-sm md:text-base text-[#5D3A1A]/90 font-bold mt-2">
+                        <h3 className="text-2xl md:text-3xl font-black text-slate-900">Upload Materi Pembelajaran</h3>
+                        <p className="text-sm md:text-base text-slate-600 font-medium mt-2">
                           Materi yang diunggah akan otomatis masuk ke bagian <strong>Materi & Study Cards</strong> siswa di room <strong>{teacherRoomCode}</strong>.
                         </p>
                       </div>
 
                       {/* Upload Dokumen File Zone (.pdf / .docx / .txt) */}
-                      <div className="p-6 md:p-8 bg-white/10 border-2 border-dashed border-white/40 rounded-2xl space-y-4 shadow-sm">
+                      <div className="p-6 md:p-8 bg-amber-50/50 border-2 border-dashed border-amber-200 rounded-2xl space-y-4 shadow-xs">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                           <div>
-                            <h4 className="font-black text-base md:text-lg text-[#5D3A1A] drop-shadow-sm">Unggah File Dokumen Materi (.pdf / .docx / .txt)</h4>
-                            <p className="text-xs md:text-sm font-bold text-[#5D3A1A]/90 mt-1">
+                            <h4 className="font-black text-base md:text-lg text-slate-900">Unggah File Dokumen Materi (.pdf / .docx / .txt)</h4>
+                            <p className="text-xs md:text-sm font-medium text-slate-600 mt-1">
                               Pilih file modul materi dari komputer Anda. Teks akan otomatis dibaca dan dimasukkan ke dalam form di bawah.
                             </p>
                           </div>
@@ -3147,7 +3369,7 @@ export default function DashboardPage() {
                             value={matTitleInput}
                             onChange={(e) => setMatTitleInput(e.target.value)}
                             placeholder="Contoh: Sistem Ekskresi & Organ Ginjal Manusia"
-                            className="w-full p-4 md:p-5 rounded-xl border-2 border-slate-200 focus:border-[#73B14C] focus:outline-hidden text-base md:text-lg font-bold text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.05)]"
+                            className="w-full p-4 md:p-5 rounded-xl border-2 border-slate-200 focus:border-amber-400 focus:outline-hidden text-base md:text-lg font-bold text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.05)]"
                           />
                         </div>
 
@@ -3158,7 +3380,7 @@ export default function DashboardPage() {
                             value={matSummaryInput}
                             onChange={(e) => setMatSummaryInput(e.target.value)}
                             placeholder="Contoh: Penjelasan tahapan filtrasi glomerulus, reabsorpsi tubulus, dan augmentasi."
-                            className="w-full p-4 md:p-5 rounded-xl border-2 border-slate-200 focus:border-[#73B14C] focus:outline-hidden text-base md:text-lg font-medium text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.05)]"
+                            className="w-full p-4 md:p-5 rounded-xl border-2 border-slate-200 focus:border-amber-400 focus:outline-hidden text-base md:text-lg font-medium text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.05)]"
                           />
                         </div>
 
@@ -3170,7 +3392,7 @@ export default function DashboardPage() {
                             value={matContentInput}
                             onChange={(e) => setMatContentInput(e.target.value)}
                             placeholder="Tuliskan atau tempelkan materi pelajaran lengkap di sini..."
-                            className="w-full p-5 rounded-xl border-2 border-slate-200 focus:border-[#73B14C] focus:outline-hidden text-base md:text-lg font-medium text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.05)]"
+                            className="w-full p-5 rounded-xl border-2 border-slate-200 focus:border-amber-400 focus:outline-hidden text-base md:text-lg font-medium text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.05)]"
                           />
                         </div>
 
@@ -3183,7 +3405,7 @@ export default function DashboardPage() {
                                   type="checkbox"
                                   checked={autoCreateQuiz}
                                   onChange={(e) => setAutoCreateQuiz(e.target.checked)}
-                                  className="w-6 h-6 text-[#3C632A] rounded-xl border-2 border-teal-400 focus:ring-0 cursor-pointer accent-[#73B14C]"
+                                  className="w-6 h-6 text-amber-600 rounded-xl border-2 border-amber-300 focus:ring-0 cursor-pointer accent-amber-500"
                                 />
                                 <span className="font-black text-base md:text-lg lg:text-xl text-teal-950">
                                   Sekalian buatkan Latihan Soal (Quiz) otomatis
@@ -3224,7 +3446,7 @@ export default function DashboardPage() {
                           <button
                             type="submit"
                             disabled={isAiProcessing}
-                            className="px-10 py-5 bg-[#73B14C] hover:bg-[#3C632A] disabled:bg-slate-400 text-white font-black text-base md:text-lg rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.05)] transition-all cursor-pointer flex items-center space-x-3"
+                            className="px-10 py-5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 disabled:bg-slate-300 text-slate-950 font-black text-base md:text-lg rounded-2xl shadow-md shadow-amber-900/10 transition-all cursor-pointer flex items-center space-x-3"
                           >
                             <svg className="w-6 h-6 fill-none stroke-current" strokeWidth="2.5" viewBox="0 0 24 24">
                               <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -3250,7 +3472,7 @@ export default function DashboardPage() {
                               <div key={mat.id} className="p-5 bg-slate-50 border border-slate-200 rounded-xl flex flex-col justify-between space-y-3">
                                 <div>
                                   <div className="flex items-start justify-between gap-2">
-                                    <span className="px-2.5 py-1 bg-[#73B14C]/10 text-[#3C632A] font-black text-xs rounded-md uppercase">
+                                    <span className="px-2.5 py-1 bg-amber-100 text-amber-900 font-black text-xs rounded-md uppercase">
                                       MODUL MATERI
                                     </span>
                                     <button
@@ -3282,11 +3504,14 @@ export default function DashboardPage() {
 
                   {/* GURU SUB-TAB 2: UPLOAD UJIAN (FILE DOKUMEN / MANUAL PG & ESSAY SUPPORT) */}
                   {guruTab === "ujian" && (
-                    <div className="bg-[#FFDF59] border-4 border-[#3C632A] rounded-[32px] p-8 md:p-12 shadow-xl space-y-8 animate-in fade-in duration-200 mt-6">
+                    <div className="relative overflow-hidden bg-gradient-to-b from-white/55 via-white/40 to-white/45 border border-white/85 ring-1 ring-amber-200/50 rounded-[32px] p-8 md:p-12 shadow-[0_12px_28px_-8px_rgba(217,119,6,0.08),inset_0_1.5px_1px_rgba(255,255,255,0.95)] space-y-8 animate-in fade-in duration-200 mt-6">
+                      {/* Specular Light Flare */}
+                      <div className="absolute -top-[1.5px] left-1/2 -translate-x-1/2 w-64 h-[3px] bg-white rounded-full shadow-[0_0_16px_5px_rgba(255,255,255,1)] pointer-events-none" />
+                      <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-white/45 via-white/10 to-transparent pointer-events-none rounded-t-[30px]" />
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
                         <div>
-                          <h3 className="text-2xl md:text-3xl font-black text-[#5D3A1A] drop-shadow-sm">Upload Paket Soal Ujian Resmi</h3>
-                          <p className="text-sm md:text-base text-slate-600 font-semibold mt-1">
+                          <h3 className="text-2xl md:text-3xl font-black text-slate-900">Upload Paket Soal Ujian Resmi</h3>
+                          <p className="text-sm md:text-base text-slate-600 font-medium mt-1">
                             Buat paket soal ujian resmi. Dapat mengunggah file dokumen ujian (.pdf/.docx) atau menyusun soal secara manual (PG & Essay).
                           </p>
                         </div>
@@ -3305,7 +3530,7 @@ export default function DashboardPage() {
                           type="button"
                           onClick={() => setExamInputMethod("file")}
                           className={`flex-1 py-3.5 px-4 rounded-xl font-black text-sm md:text-base transition-all cursor-pointer ${examInputMethod === "file"
-                            ? "bg-[#73B14C] text-white shadow-[0_4px_12px_rgba(0,0,0,0.05)]"
+                            ? "bg-amber-500 text-slate-950 shadow-xs"
                             : "text-slate-700 hover:text-slate-900"
                             }`}
                         >
@@ -3315,7 +3540,7 @@ export default function DashboardPage() {
                           type="button"
                           onClick={() => setExamInputMethod("manual")}
                           className={`flex-1 py-3.5 px-4 rounded-xl font-black text-sm md:text-base transition-all cursor-pointer ${examInputMethod === "manual"
-                            ? "bg-[#73B14C] text-white shadow-[0_4px_12px_rgba(0,0,0,0.05)]"
+                            ? "bg-amber-500 text-slate-950 shadow-xs"
                             : "text-slate-700 hover:text-slate-900"
                             }`}
                         >
@@ -3333,7 +3558,7 @@ export default function DashboardPage() {
                               value={examTitleInput}
                               onChange={(e) => setExamTitleInput(e.target.value)}
                               placeholder="Contoh: Ujian Akhir Semester IPAS Bab 1: Tumbuhan & Lingkungan"
-                              className="w-full p-4 rounded-xl border-2 border-slate-200 focus:border-[#73B14C] focus:outline-hidden text-base md:text-lg font-bold text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.05)]"
+                              className="w-full p-4 rounded-xl border-2 border-slate-200 focus:border-amber-400 focus:outline-hidden text-base md:text-lg font-bold text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.05)]"
                             />
                           </div>
                           <div className="space-y-2">
@@ -3344,7 +3569,7 @@ export default function DashboardPage() {
                               max={180}
                               value={examDurationInput}
                               onChange={(e) => setExamDurationInput(Number(e.target.value))}
-                              className="w-full p-4 rounded-xl border-2 border-slate-200 focus:border-[#73B14C] focus:outline-hidden text-base md:text-lg font-bold text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.05)]"
+                              className="w-full p-4 rounded-xl border-2 border-slate-200 focus:border-amber-400 focus:outline-hidden text-base md:text-lg font-bold text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.05)]"
                             />
                           </div>
                         </div>
@@ -3392,7 +3617,7 @@ export default function DashboardPage() {
                                 <button
                                   type="button"
                                   onClick={() => setQType("pg")}
-                                  className={`px-3 py-1.5 text-xs font-black rounded-lg transition-all ${qType === "pg" ? "bg-[#73B14C] text-white" : "text-slate-600 hover:text-slate-900"
+                                  className={`px-3 py-1.5 text-xs font-black rounded-lg transition-all ${qType === "pg" ? "bg-amber-500 text-slate-950" : "text-slate-600 hover:text-slate-900"
                                     }`}
                                 >
                                   Pilihan Ganda (PG)
@@ -3421,7 +3646,7 @@ export default function DashboardPage() {
                                     ? "Tuliskan soal pilihan ganda di sini..."
                                     : "Tuliskan pertanyaan soal essay / uraian di sini..."
                                 }
-                                className="w-full p-3.5 rounded-xl border-2 border-slate-200 focus:border-[#73B14C] focus:outline-hidden text-sm font-semibold text-slate-900 bg-white"
+                                className="w-full p-3.5 rounded-xl border-2 border-slate-200 focus:border-amber-400 focus:outline-hidden text-sm font-semibold text-slate-900 bg-white"
                               />
                             </div>
 
@@ -3550,7 +3775,7 @@ export default function DashboardPage() {
                         <div className="pt-4 border-t border-slate-100">
                           <button
                             type="submit"
-                            className="w-full py-4 bg-[#73B14C] hover:bg-[#3C632A] text-white font-black text-base rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.05)] transition-all cursor-pointer text-center"
+                            className="w-full py-4 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-black text-base rounded-2xl shadow-md shadow-amber-900/10 transition-all cursor-pointer text-center"
                           >
                             Publikasikan Paket Ujian Resmi Ke Room {teacherRoomCode}
                           </button>
@@ -3561,12 +3786,15 @@ export default function DashboardPage() {
 
                   {/* GURU SUB-TAB 3: GENERATE KODE & KELOLA ROOM KELAS */}
                   {guruTab === "room" && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-200">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-200 mt-6">
                       {/* Form 1: Connect / Create Class Room */}
-                      <div className="bg-[#FFDF59] border-4 border-[#3C632A] rounded-[32px] p-6 md:p-8 shadow-xl space-y-5">
+                      <div className="relative overflow-hidden bg-gradient-to-b from-white/55 via-white/40 to-white/45 border border-white/85 ring-1 ring-amber-200/50 rounded-[32px] p-6 md:p-8 shadow-[0_12px_28px_-8px_rgba(217,119,6,0.08),inset_0_1.5px_1px_rgba(255,255,255,0.95)] space-y-5">
+                        {/* Specular Light Flare */}
+                        <div className="absolute -top-[1.5px] left-1/2 -translate-x-1/2 w-48 h-[3px] bg-white rounded-full shadow-[0_0_14px_4px_rgba(255,255,255,1)] pointer-events-none" />
+                        <div className="absolute top-0 left-0 right-0 h-28 bg-gradient-to-b from-white/45 via-white/10 to-transparent pointer-events-none rounded-t-[30px]" />
                         <div>
-                          <h3 className="text-2xl font-black text-[#5D3A1A]">Hubungkan / Buat Room Kelas Baru</h3>
-                          <p className="text-sm font-bold text-[#5D3A1A]/80 mt-1">
+                          <h3 className="text-2xl font-black text-slate-900">Hubungkan / Buat Room Kelas Baru</h3>
+                          <p className="text-sm font-medium text-slate-600 mt-1">
                             Buat kode kelas unik agar siswa dapat terhubung langsung ke room Anda.
                           </p>
                         </div>
@@ -3578,7 +3806,7 @@ export default function DashboardPage() {
                               <button
                                 type="button"
                                 onClick={handleGenerateCode}
-                                className="text-xs font-black text-[#3C632A] hover:underline flex items-center space-x-1 cursor-pointer"
+                                className="text-xs font-black text-amber-700 hover:text-amber-800 hover:underline flex items-center space-x-1 cursor-pointer"
                               >
                                 <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                                   <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
@@ -3593,7 +3821,7 @@ export default function DashboardPage() {
                                 readOnly
                                 value={newRoomCode}
                                 placeholder="Klik Generate Kode Unik Baru"
-                                className="w-full p-3.5 pr-12 rounded-xl border-2 border-slate-200 text-sm font-black text-[#3C632A] tracking-wider uppercase bg-slate-100 cursor-not-allowed select-none"
+                                className="w-full p-3.5 pr-12 rounded-xl border-2 border-amber-200 text-sm font-black text-slate-900 tracking-wider uppercase bg-amber-50/50 cursor-not-allowed select-none"
                               />
                               <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none" title="Kode otomatis, tidak dapat diketik manual">
                                 <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
@@ -3614,7 +3842,7 @@ export default function DashboardPage() {
                               value={newClassName}
                               onChange={(e) => setNewClassName(e.target.value)}
                               placeholder="Contoh: Kelas 4-A IPAS"
-                              className="w-full p-3.5 rounded-xl border-2 border-slate-200 focus:border-[#73B14C] focus:outline-hidden text-sm font-bold text-slate-900"
+                              className="w-full p-3.5 rounded-xl border-2 border-slate-200 focus:border-amber-400 focus:outline-hidden text-sm font-bold text-slate-900"
                             />
                           </div>
 
@@ -3643,7 +3871,7 @@ export default function DashboardPage() {
 
                           <button
                             type="submit"
-                            className="w-full py-3.5 bg-[#73B14C] hover:bg-[#3C632A] text-white font-black text-sm rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.05)] transition-colors cursor-pointer"
+                            className="w-full py-3.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-black text-sm rounded-2xl shadow-md shadow-amber-900/10 transition-colors cursor-pointer"
                           >
                             Simpan & Hubungkan Room Kelas
                           </button>
@@ -3651,11 +3879,14 @@ export default function DashboardPage() {
                       </div>
 
                       {/* Form 2: Room Announcement Broadcast */}
-                      <div className="bg-[#FFDF59] border-4 border-[#3C632A] rounded-[32px] p-6 md:p-8 shadow-xl space-y-5 flex flex-col justify-between">
+                      <div className="relative overflow-hidden bg-gradient-to-b from-white/55 via-white/40 to-white/45 border border-white/85 ring-1 ring-amber-200/50 rounded-[32px] p-6 md:p-8 shadow-[0_12px_28px_-8px_rgba(217,119,6,0.08),inset_0_1.5px_1px_rgba(255,255,255,0.95)] space-y-5 flex flex-col justify-between">
+                        {/* Specular Light Flare */}
+                        <div className="absolute -top-[1.5px] left-1/2 -translate-x-1/2 w-48 h-[3px] bg-white rounded-full shadow-[0_0_14px_4px_rgba(255,255,255,1)] pointer-events-none" />
+                        <div className="absolute top-0 left-0 right-0 h-28 bg-gradient-to-b from-white/45 via-white/10 to-transparent pointer-events-none rounded-t-[30px]" />
                         <div className="space-y-5">
                           <div>
-                            <h3 className="text-2xl font-black text-[#5D3A1A]">Broadcast Pengumuman Room</h3>
-                            <p className="text-sm font-bold text-[#5D3A1A]/80 mt-1">
+                            <h3 className="text-2xl font-black text-slate-900">Broadcast Pengumuman Room</h3>
+                            <p className="text-sm font-medium text-slate-600 mt-1">
                               Kirimkan instruksi atau kabar terbaru langsung ke feed pengumuman siswa di room {teacherRoomCode}.
                             </p>
                           </div>
@@ -3667,11 +3898,11 @@ export default function DashboardPage() {
                               value={announcementInput}
                               onChange={(e) => setAnnouncementInput(e.target.value)}
                               placeholder="Tulis pengumuman resmi di sini..."
-                              className="w-full p-4 rounded-xl border-2 border-slate-200 focus:border-[#73B14C] focus:outline-hidden text-sm font-medium text-slate-900"
+                              className="w-full p-4 rounded-xl border-2 border-slate-200 focus:border-amber-400 focus:outline-hidden text-sm font-medium text-slate-900"
                             />
                             <button
                               type="submit"
-                              className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-black text-sm rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.05)] transition-colors cursor-pointer"
+                              className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-black text-sm rounded-xl shadow-xs transition-colors cursor-pointer"
                             >
                               Post Pengumuman Ke Chat Room {teacherRoomCode}
                             </button>
@@ -3680,7 +3911,7 @@ export default function DashboardPage() {
 
                         <div className="pt-4 border-t border-slate-100 text-xs font-bold text-slate-700 flex items-center justify-between">
                           <span>Daftar Pengumuman Aktif: {teacherRoom?.announcements.length || 0} Post</span>
-                          <span className="text-[#3C632A]">Real-time Sync Active</span>
+                          <span className="text-emerald-700 font-bold">Real-time Sync Active</span>
                         </div>
                       </div>
                     </div>
@@ -3688,30 +3919,151 @@ export default function DashboardPage() {
 
                   {/* GURU SUB-TAB 4: MONITORING CONTENT & PENILAIAN ESSAY */}
                   {guruTab === "rekap" && (
-                    <div className="space-y-6 animate-in fade-in duration-200">
-                      <div className="bg-[#FFDF59] border-4 border-[#3C632A] rounded-[32px] p-6 md:p-8 shadow-xl space-y-6">
+                    <div className="space-y-6 animate-in fade-in duration-200 mt-6">
+                      <div className="relative overflow-hidden bg-white/75  border-2 border-white/95 ring-1 ring-amber-200/60 rounded-[32px] p-6 md:p-8 shadow-md space-y-6">
                         <div>
-                          <h3 className="text-2xl font-black text-[#5D3A1A]">Rekap Konten & Hasil Ujian Siswa ({teacherRoomCode})</h3>
-                          <p className="text-sm md:text-base font-bold text-[#5D3A1A]/80 mt-1">
+                          <h3 className="text-2xl font-black text-slate-900">Rekap Konten & Hasil Ujian Siswa ({teacherRoomCode})</h3>
+                          <p className="text-sm md:text-base font-medium text-slate-600 mt-1">
                             Memantau materi, kuis, paket ujian resmi, dan penilaian jawaban essay siswa yang dikumpulkan.
                           </p>
                         </div>
 
+                        {/* KONTROL TIMER UJIAN MISI AKHIR (ISOLASI KHUSUS ROOM INI) */}
+                        <div className="bg-gradient-to-br from-amber-500/10 via-amber-400/5 to-white border-2 border-amber-300/80 rounded-3xl p-6 md:p-7 shadow-xs space-y-5">
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="space-y-1.5">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="w-3 h-3 rounded-full shrink-0"
+                                  style={{
+                                    backgroundColor: teacherRoomTimer.isActive ? '#10B981' : '#F59E0B',
+                                    boxShadow: teacherRoomTimer.isActive ? '0 0 10px rgba(16, 185, 129, 0.8)' : 'none'
+                                  }}
+                                />
+                                <span className="text-xs font-black uppercase tracking-wider text-amber-900 bg-amber-100/90 px-3 py-1 rounded-full border border-amber-300">
+                                  Timer Ujian Khusus Room {teacherRoomCode}
+                                </span>
+                              </div>
+                              <h4 className="text-xl md:text-2xl font-black text-slate-900">
+                                Kontrol Timer Misi Akhir
+                              </h4>
+                              <p className="text-xs md:text-sm font-medium text-slate-600 max-w-xl leading-relaxed">
+                                Atur durasi dan mulai waktu ujian resmi. Timer ini <strong className="text-slate-900 font-extrabold underline">hanya berlaku untuk siswa di room {teacherRoomCode}</strong>. Siswa di room lain tidak akan terpengaruh.
+                              </p>
+                            </div>
+
+                            {/* Status Countdown Display */}
+                            <div className="flex items-center">
+                              {teacherRoomTimer.isActive ? (
+                                <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-5 py-3.5 rounded-2xl shadow-md border-2 border-emerald-400 flex items-center gap-3.5">
+                                  <div className="w-3 h-3 rounded-full bg-white animate-pulse shrink-0" />
+                                  <div>
+                                    <div className="text-[10px] font-black uppercase tracking-wider text-emerald-100">
+                                      Timer Berjalan ({teacherRoomTimer.durationMinutes}m)
+                                    </div>
+                                    <div className="text-2xl font-black font-mono tracking-wider">
+                                      {formatTime(guruRemainingSeconds)}
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="bg-slate-100/90 text-slate-700 px-5 py-3.5 rounded-2xl border-2 border-slate-200">
+                                  <div className="text-[10px] font-black uppercase tracking-wider text-slate-500">Status Timer Siswa</div>
+                                  <div className="text-base font-black text-slate-800">Menunggu Dimulai</div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Control Row: Free Duration Input + Presets + Action Buttons */}
+                          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 pt-3 border-t border-amber-200/60">
+                            {/* Duration Input & Presets */}
+                            <div className="flex flex-wrap items-center gap-3">
+                              <label className="text-xs md:text-sm font-black text-slate-700">
+                                Durasi Ujian:
+                              </label>
+                              <div className="flex items-center gap-1.5">
+                                <input
+                                  type="number"
+                                  min={1}
+                                  max={300}
+                                  value={guruTimerDuration}
+                                  onChange={(e) => setGuruTimerDuration(Math.max(1, parseInt(e.target.value) || 1))}
+                                  disabled={teacherRoomTimer.isActive}
+                                  className="w-20 px-3 py-2 rounded-xl border-2 border-amber-300 bg-white font-black text-base text-center text-slate-800 shadow-inner focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:bg-slate-100 disabled:text-slate-500"
+                                />
+                                <span className="text-xs font-bold text-slate-600">Menit</span>
+                              </div>
+
+                              {/* Quick Presets */}
+                              <div className="flex items-center gap-1.5">
+                                {[15, 30, 45, 60, 90].map((m) => (
+                                  <button
+                                    key={m}
+                                    type="button"
+                                    disabled={teacherRoomTimer.isActive}
+                                    onClick={() => setGuruTimerDuration(m)}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                                      guruTimerDuration === m
+                                        ? "bg-amber-500 text-white shadow-xs"
+                                        : "bg-white/90 hover:bg-white text-slate-700 border border-amber-200 disabled:opacity-50"
+                                    }`}
+                                  >
+                                    {m}m
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex items-center gap-2.5 flex-wrap">
+                              {teacherRoomTimer.isActive ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAddGuruTimerMinutes(10)}
+                                    className="px-4 py-2.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-extrabold text-xs md:text-sm rounded-xl transition-all active:scale-95 cursor-pointer shadow-xs"
+                                  >
+                                    +10 Menit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStopGuruTimer()}
+                                    className="px-5 py-2.5 bg-rose-500 hover:bg-rose-600 text-white font-black text-xs md:text-sm rounded-xl transition-all active:scale-95 cursor-pointer shadow-md flex items-center gap-2"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
+                                    Hentikan Timer
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleStartGuruTimer()}
+                                  className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-black text-sm md:text-base rounded-2xl shadow-lg transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+                                >
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                  Mulai Timer Ujian Room {teacherRoomCode} ({guruTimerDuration} Menit)
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
                         {/* Status Grid */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-1">
-                            <p className="text-2xl font-black text-[#3C632A]">{teacherRoom?.materials.length || 0}</p>
+                          <div className="p-4 bg-amber-50/50 border border-amber-200/80 rounded-2xl text-center space-y-1">
+                            <p className="text-2xl font-black text-amber-700">{teacherRoom?.materials.length || 0}</p>
                             <p className="text-xs font-bold text-slate-600">Total Materi</p>
                           </div>
-                          <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-1">
+                          <div className="p-4 bg-amber-50/50 border border-amber-200/80 rounded-2xl text-center space-y-1">
                             <p className="text-2xl font-black text-emerald-600">{teacherRoom?.quizzes?.length || 0}</p>
                             <p className="text-xs font-bold text-slate-600">Latihan Kuis</p>
                           </div>
-                          <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-1">
+                          <div className="p-4 bg-amber-50/50 border border-amber-200/80 rounded-2xl text-center space-y-1">
                             <p className="text-2xl font-black text-purple-600">{teacherRoom?.exams?.length || 0}</p>
                             <p className="text-xs font-bold text-slate-600">Paket Ujian</p>
                           </div>
-                          <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-1">
+                          <div className="p-4 bg-amber-50/50 border border-amber-200/80 rounded-2xl text-center space-y-1">
                             <p className="text-2xl font-black text-rose-600">
                               {new Set([
                                 ...monitorQuizResults.map(r => r.studentName),
@@ -3909,7 +4261,7 @@ export default function DashboardPage() {
                 <div>
                   <h2 className="text-xl font-black text-slate-900">Profil PINTARA</h2>
                   {userSession?.role === "siswa" && (
-                    <p className="text-xs font-semibold text-[#3C632A] mt-0.5">{activeMode} Aktif</p>
+                    <p className="text-xs font-semibold text-amber-700 mt-0.5">{activeMode} Aktif</p>
                   )}
                 </div>
               </div>
@@ -3928,7 +4280,7 @@ export default function DashboardPage() {
                 )}
                 <button
                   onClick={() => setActiveTab("katalog")}
-                  className="w-full py-3 px-4 bg-[#73B14C] hover:bg-[#3C632A] text-white font-bold rounded-xl text-xs flex items-center justify-between transition-colors"
+                  className="w-full py-3 px-4 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-bold rounded-xl text-xs flex items-center justify-between transition-colors shadow-xs"
                 >
                   <span>Kembali ke Katalog Mapel</span>
                   <svg className="w-4 h-4 fill-none stroke-current" strokeWidth="2" viewBox="0 0 24 24">
@@ -3946,27 +4298,27 @@ export default function DashboardPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10 animate-in fade-in duration-300">
             {/* Overlay Background */}
             <div
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-slate-900/60 "
               onClick={() => setActiveMaterialPdf(null)}
             />
 
-            <div className="relative w-full max-w-5xl h-full md:h-[90vh] bg-[#F8FAFC] rounded-xl shadow-2xl flex flex-col overflow-hidden border-4 border-slate-200">
+            <div className="relative w-full max-w-5xl h-full md:h-[90vh] bg-[#F8FAFC] rounded-2xl shadow-2xl flex flex-col overflow-hidden border-2 border-amber-200">
               {/* Header Modal */}
-              <div className="px-6 py-4 bg-white border-b border-slate-200 flex items-center justify-between">
+              <div className="px-6 py-4 bg-white border-b border-amber-100 flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center border border-slate-200 text-slate-600 font-black">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100/80 flex items-center justify-center border border-amber-200 text-amber-900 font-black">
                     M
                   </div>
                   <div>
                     <h3 className="font-black text-slate-900 text-lg md:text-xl truncate max-w-lg">
                       {activeMaterialPdf.title}
                     </h3>
-                    <p className="text-xs font-bold text-slate-700">Dokumen Pembelajaran</p>
+                    <p className="text-xs font-medium text-slate-600">Dokumen Pembelajaran</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setActiveMaterialPdf(null)}
-                  className="w-10 h-10 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 flex items-center justify-center transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.05)]"
+                  className="w-10 h-10 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 flex items-center justify-center transition-colors shadow-xs"
                 >
                   <svg className="w-5 h-5 fill-none stroke-current" strokeWidth="2.5" viewBox="0 0 24 24">
                     <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
@@ -3998,11 +4350,11 @@ export default function DashboardPage() {
 
         {/* MODAL STUDY CARDS (INTERACTIVE FLASHCARDS ENGINE - BUG-FREE FLIP & ENLARGED TEXT) */}
         {activeFlashcardMaterial && activeFlashcardMaterial.flashcards.length > 0 && (
-          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl p-6 md:p-10 max-w-2xl md:max-w-3xl w-full shadow-2xl relative animate-in fade-in zoom-in duration-300 border-2 border-slate-200">
-              <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100">
+          <div className="fixed inset-0 z-50 bg-slate-900/60  flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl p-6 md:p-10 max-w-2xl md:max-w-3xl w-full shadow-2xl relative animate-in fade-in zoom-in duration-300 border-2 border-amber-200">
+              <div className="flex items-center justify-between mb-4 pb-4 border-b border-amber-100">
                 <div>
-                  <span className="text-xs font-black uppercase tracking-wider text-[#3C632A] bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
+                  <span className="text-xs font-black uppercase tracking-wider text-amber-900 bg-amber-100/80 px-3 py-1 rounded-full border border-amber-200">
                     STUDY CARDS (FLASHCARDS)
                   </span>
                   <h3 className="text-lg md:text-xl font-black text-slate-900 mt-2">
@@ -4039,12 +4391,12 @@ export default function DashboardPage() {
                   <div id="btn-flashcard-flip" role="button" tabIndex={0} data-scan-label="Putar Kartu (Flip)" onClick={toggleFlip} className="w-full h-80 md:h-[360px] cursor-pointer mb-8 group transition-transform duration-300 active:scale-98"
                   >
                     <div
-                      className={`w-full h-full rounded-xl p-6 md:p-8 flex flex-col items-center justify-between text-center shadow-xl transition-all duration-300 overflow-hidden ${isFlipped
-                        ? "bg-[#73B14C] text-white ring-4 ring-[#73B14C]/20"
-                        : "bg-white border-4 border-[#73B14C]/30 text-slate-900 hover:border-[#73B14C]"
+                      className={`w-full h-full rounded-2xl p-6 md:p-8 flex flex-col items-center justify-between text-center shadow-md transition-all duration-300 overflow-hidden ${isFlipped
+                        ? "bg-gradient-to-br from-amber-400 to-amber-500 text-slate-950 ring-4 ring-amber-300/40"
+                        : "bg-white border-2 border-amber-200/80 text-slate-900 hover:border-amber-400"
                         }`}
                     >
-                      <span className={`text-xs md:text-sm font-black uppercase tracking-wider px-3.5 py-1.5 rounded-full shrink-0 ${isFlipped ? "bg-[#3C632A]/40 text-[#FFFFDB] border border-[#3C632A]/30" : "bg-slate-100 text-slate-700"
+                      <span className={`text-xs md:text-sm font-black uppercase tracking-wider px-3.5 py-1.5 rounded-full shrink-0 ${isFlipped ? "bg-amber-600/20 text-slate-900 border border-amber-600/30" : "bg-slate-100 text-slate-700"
                         }`}>
                         {isFlipped ? "JAWABAN / PENJELASAN (BELAKANG)" : "PERTANYAAN / KONSEP (DEPAN)"}
                       </span>
@@ -4074,7 +4426,7 @@ export default function DashboardPage() {
 
                 <button id="btn-flashcard-sound" data-scan-label="Suara Kartu" onClick={() => { const fc = activeFlashcardMaterial.flashcards[flashcardIndex]; speakText(isFlipped ? `Jawaban: ${fc.back}` : `Pertanyaan: ${fc.front}`);
                   }}
-                  className="px-6 py-3.5 bg-teal-50 text-[#3C632A] border-2 border-teal-200 font-extrabold text-sm md:text-base rounded-xl hover:bg-teal-100 transition-all flex items-center space-x-2"
+                  className="px-6 py-3.5 bg-amber-50 text-amber-900 border-2 border-amber-200 font-extrabold text-sm md:text-base rounded-xl hover:bg-amber-100 transition-all flex items-center space-x-2"
                 >
                   <svg className="w-5 h-5 fill-none stroke-current" strokeWidth="2" viewBox="0 0 24 24">
                     <path d="M11 5L6 9H2v6h4l5 4V5zM15.54 8.46a5 5 0 010 7.07" />
@@ -4082,7 +4434,7 @@ export default function DashboardPage() {
                   <span>Suara Kartu</span>
                 </button>
 
-                <button id="btn-flashcard-next" data-scan-label="Kartu Selanjutnya" onClick={nextFlashcard} className="px-6 py-3.5 bg-[#73B14C] hover:bg-[#3C632A] text-white font-extrabold text-sm md:text-base rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.05)] transition-all"
+                <button id="btn-flashcard-next" data-scan-label="Kartu Selanjutnya" onClick={nextFlashcard} className="px-6 py-3.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-extrabold text-sm md:text-base rounded-xl shadow-xs transition-all"
                 >
                   Kartu Lanjut →
                 </button>
@@ -4093,8 +4445,8 @@ export default function DashboardPage() {
 
         {/* Modal Pilih Jenjang/Kelas */}
         {isGradeModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-            <div className="bg-[#F8F9FA] rounded-[32px] p-8 md:p-10 w-full max-w-md shadow-2xl relative animate-in fade-in zoom-in duration-300 max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 ">
+            <div className="bg-white rounded-[32px] p-8 md:p-10 w-full max-w-md shadow-2xl relative animate-in fade-in zoom-in duration-300 max-h-[90vh] overflow-y-auto border-2 border-amber-200">
               {/* Hanya tampilkan tombol close jika jenjang sudah diset sebelumnya (edit mode) */}
               {userSession?.jenjang && (
                 <button
@@ -4113,7 +4465,7 @@ export default function DashboardPage() {
               <div className="text-center mb-8">
                 <h2 className="text-2xl font-bold text-slate-900 mb-2">Lengkapi profil dulu yuk!</h2>
                 <p className="text-lg text-slate-700 font-medium">Pilih jenjang kamu ya</p>
-                <div className="w-32 h-1 bg-slate-200 mx-auto rounded-full mt-6"></div>
+                <div className="w-32 h-1 bg-amber-200 mx-auto rounded-full mt-6"></div>
               </div>
 
               <div className="space-y-4">
@@ -4123,8 +4475,8 @@ export default function DashboardPage() {
                     key={grade}
                     className="flex items-center space-x-3 cursor-pointer group"
                   >
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${selectedGrade === grade ? "border-[#73B14C]" : "border-slate-300 group-hover:border-slate-400"}`}>
-                      {selectedGrade === grade && <div className="w-2.5 h-2.5 bg-[#73B14C] rounded-full"></div>}
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${selectedGrade === grade ? "border-amber-500" : "border-slate-300 group-hover:border-slate-400"}`}>
+                      {selectedGrade === grade && <div className="w-2.5 h-2.5 bg-amber-500 rounded-full"></div>}
                     </div>
                     <span className={`text-base font-medium transition-colors ${selectedGrade === grade ? "text-slate-900" : "text-slate-600 group-hover:text-slate-800"}`}>
                       {grade}
@@ -4143,7 +4495,7 @@ export default function DashboardPage() {
               <button
                 disabled={!selectedGrade || isUpdatingJenjang}
                 onClick={handleSaveJenjang}
-                className={`w-full py-4 mt-10 rounded-xl font-bold text-lg transition-all flex justify-center items-center ${selectedGrade && !isUpdatingJenjang ? "bg-[#73B14C] text-white hover:bg-[#3C632A] shadow-[0_4px_12px_rgba(0,0,0,0.05)] hover:shadow-xl" : "bg-slate-200 text-slate-600 cursor-not-allowed"}`}
+                className={`w-full py-4 mt-10 rounded-2xl font-black text-lg transition-all flex justify-center items-center ${selectedGrade && !isUpdatingJenjang ? "bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 shadow-md shadow-amber-900/10 hover:shadow-lg" : "bg-slate-200 text-slate-600 cursor-not-allowed"}`}
               >
                 {isUpdatingJenjang ? "Menyimpan (Proses)..." : "Lanjut"}
               </button>
@@ -4152,7 +4504,7 @@ export default function DashboardPage() {
         )}
 
         {/* Floating Fixed Bottom-Right Sound Toggle Button */}
-        {userSession?.role === "siswa" && (
+        {userSession?.role === "siswa" && !isExamFullscreen && (
           <div className="fixed bottom-6 right-6 z-50 pointer-events-none">
             <SoundToggleButton className="pointer-events-auto" />
           </div>

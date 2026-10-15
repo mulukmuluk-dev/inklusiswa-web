@@ -9,75 +9,74 @@ interface LandingPageProps {
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
   return (
-    <div className="min-h-screen bg-[#FFFFDB] font-sans text-[#3C632A] scroll-smooth">
-      {/* HEADER (Bright Orange/Yellow) */}
-      <header className="sticky top-0 z-50 border-b-4 border-[#3C632A] bg-[#FFBA48]">
+    <div 
+      className="min-h-screen font-sans text-slate-900 scroll-smooth bg-[#FFF9EE]"
+      style={{ backgroundImage: "radial-gradient(#F5DCB0 1.5px, transparent 1.5px)", backgroundSize: "24px 24px" }}
+    >
+      {/* HEADER */}
+      <header className="sticky top-0 z-50 border-b-2 border-amber-200/80 bg-white/90 backdrop-blur-md shadow-xs">
         <div className="flex w-full items-center justify-between gap-3 px-5 py-3 md:px-10 xl:px-16">
-          <div className="flex items-center space-x-3 shrink-0 cursor-pointer" onClick={() => window.scrollTo(0, 0)}>
-            {/* Logo transparent so it shows #FFBA48 */}
+          <div className="flex items-center space-x-3 shrink-0 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
             <div className="p-1"><PintaraLogo size="md" /></div>
           </div>
-          <nav aria-label="Navigasi utama" className="hidden items-center gap-2 lg:flex">
-            <a className="rounded-full px-4 py-1.5 text-[24px] font-black text-[#3C632A] transition-colors duration-200 hover:bg-[#3C632A] hover:text-[#FFFFDB]" href="#fitur">Fitur Seru</a>
-            <a className="rounded-full px-4 py-1.5 text-[24px] font-black text-[#3C632A] transition-colors duration-200 hover:bg-[#3C632A] hover:text-[#FFFFDB]" href="#petualangan">Petualangan</a>
-            <a className="rounded-full px-4 py-1.5 text-[24px] font-black text-[#3C632A] transition-colors duration-200 hover:bg-[#3C632A] hover:text-[#FFFFDB]" href="#akses">Mulai Main</a>
+          <nav aria-label="Navigasi utama" className="hidden items-center gap-3 lg:flex">
+            <a className="rounded-full px-5 py-2 text-base font-bold text-slate-700 transition-colors duration-200 hover:bg-amber-100/80 hover:text-amber-950" href="#fitur">Fitur Seru</a>
+            <a className="rounded-full px-5 py-2 text-base font-bold text-slate-700 transition-colors duration-200 hover:bg-amber-100/80 hover:text-amber-950" href="#petualangan">Petualangan</a>
+            <a className="rounded-full px-5 py-2 text-base font-bold text-slate-700 transition-colors duration-200 hover:bg-amber-100/80 hover:text-amber-950" href="#akses">Mulai Main</a>
           </nav>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={onStart}
-              className="group relative inline-block min-h-[50px] overflow-hidden rounded-full border-4 border-[#3C632A] bg-[#FF784E] px-[24px] py-[6px] text-center text-[24px] font-black text-[#FFFFDB] transition-all duration-300 shadow-md hover:shadow-lg cursor-pointer"
+              className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 px-6 py-2.5 rounded-full text-base font-black shadow-xs hover:shadow-md transition-all cursor-pointer"
             >
-              <span className="relative z-10">Masuk Aplikasi</span>
-              <span className="absolute inset-0 z-0 w-0 rounded-full bg-[#3C632A] transition-all duration-300 group-hover:w-full"></span>
+              Masuk Aplikasi
             </button>
           </div>
         </div>
       </header>
 
       <main>
-        {/* HERO SECTION (Blackboard Background) */}
-        <section 
-          id="top" 
-          className="relative overflow-hidden bg-cover bg-center bg-no-repeat bg-[#73B14C]"
-          style={{ backgroundImage: "url('/images/blackboard_bg.png')" }}
-        >
-          {/* Overlay for better readability */}
-          <div className="absolute inset-0 bg-black/10 pointer-events-none"></div>
-          
-          <div className="relative grid w-full grid-cols-1 gap-10 px-5 py-16 md:grid-cols-2 md:gap-14 md:px-10 md:py-28 xl:px-16 items-stretch">
-            {/* Left Card: Vibrant Yellow (Like Header) */}
-            <div className="relative rounded-[28px] bg-[#FFBA48] p-8 md:p-12 z-10 border-4 border-[#3C632A] shadow-xl flex flex-col justify-center">
-              <p className="mb-6 w-fit inline-block rounded-full bg-white px-5 py-2 text-[19px] font-black text-[#FF784E] border-4 border-[#3C632A] shadow-md">
+        {/* HERO SECTION */}
+        <section id="top" className="relative overflow-hidden py-12 md:py-20">
+          <div className="relative grid w-full grid-cols-1 gap-10 px-5 md:grid-cols-2 md:gap-14 md:px-10 xl:px-16 items-stretch max-w-7xl mx-auto">
+            {/* Left Card: Sunshine Yellow Banner */}
+            <div className="relative rounded-[36px] bg-gradient-to-br from-[#FFC727] via-[#FFB800] to-[#FFA700] p-8 md:p-14 z-10 border-2 border-amber-300 shadow-xl shadow-amber-900/10 flex flex-col justify-center">
+              <span className="mb-6 w-fit inline-block rounded-full bg-white/90 px-5 py-2 text-sm font-black text-amber-950 border border-amber-200 shadow-xs">
                 Belajar Seru untuk Anak SD
-              </p>
-              <h1 className="m-0 text-[clamp(2.8rem,7vw,5rem)] font-black leading-[1.05] text-[#3C632A]">
+              </span>
+              <h1 className="m-0 text-[clamp(2.4rem,5.5vw,4.2rem)] font-black leading-[1.08] text-slate-950 tracking-tight">
                 Belajar seru seperti bermain di kelas yang ceria
               </h1>
-              <p className="mt-6 text-[22px] font-bold leading-relaxed text-[#3C632A]">
+              <p className="mt-6 text-lg md:text-xl font-bold leading-relaxed text-slate-950/85">
                 PINTARA mengajak teman-teman mengenal dunia lewat cerita, game, dan kelas ajaib. Setiap petualangan dirancang khusus agar mudah dipahami dan sangat seru!
               </p>
-              <div className="mt-10 flex flex-wrap gap-4">
+              <div className="mt-8 flex flex-wrap gap-4">
                 <button
                   onClick={onStart}
-                  className="group relative inline-block min-h-[56px] overflow-hidden rounded-full border-4 border-[#3C632A] bg-white px-[36px] py-[14px] text-center text-[22px] font-black transition-all duration-300 text-[#3C632A] hover:text-white shadow-md hover:shadow-lg"
+                  className="bg-slate-950 hover:bg-slate-900 text-white px-8 py-4 rounded-full text-lg font-black shadow-lg shadow-slate-950/20 hover:scale-105 transition-all cursor-pointer"
                 >
-                  <span className="relative z-10">Mulai Petualangan</span>
-                  <span className="absolute inset-0 z-0 w-0 rounded-full bg-[#73B14C] transition-all duration-300 group-hover:w-full"></span>
+                  Mulai Petualangan
                 </button>
               </div>
             </div>
             
-            {/* Right Column: Illustration Frame */}
+            {/* Right Column: Illustration Card */}
             <figure className="relative m-0 flex w-full flex-col justify-center z-10">
-              <div className="aspect-[4/3] w-full rounded-[28px] border-4 border-[#3C632A] bg-[#FFFFDB] flex items-center justify-center shadow-xl overflow-hidden relative group">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#FFE296]/60 to-[#FFBA48]/60" />
-                {/* Fun SVG Illustration for kids */}
-                <svg className="w-56 h-56 text-[#FF5685] z-10 group-hover:scale-110 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
+              <div className="aspect-[4/3] w-full rounded-[36px] border-2 border-amber-200/80 bg-white flex items-center justify-center shadow-xl shadow-amber-900/5 overflow-hidden relative group">
+                <div className="absolute inset-0 bg-gradient-to-br from-amber-50 to-amber-100/40" />
+                {/* Book & Star SVG Illustration */}
+                <div className="relative z-10 flex flex-col items-center justify-center p-8 text-center group-hover:scale-105 transition-transform duration-500">
+                  <div className="w-28 h-28 rounded-3xl bg-amber-100/90 border border-amber-200 flex items-center justify-center mb-4 shadow-xs">
+                    <svg className="w-16 h-16 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                  </div>
+                  <h3 className="text-2xl font-black text-slate-900">Ruang Kelas Masa Depan</h3>
+                  <p className="text-slate-600 font-medium text-sm mt-1 max-w-xs">Aksesibilitas lengkap untuk semua anak Indonesia</p>
+                </div>
               </div>
-              <figcaption className="mt-6 mx-auto md:mr-0 inline-block w-fit rounded-full border-4 border-[#3C632A] bg-[#FFBA48] px-6 py-3 text-[20px] font-black text-[#3C632A] shadow-md rotate-2">
+              <figcaption className="mt-6 mx-auto md:mr-0 inline-block w-fit rounded-full border-2 border-amber-200 bg-white px-6 py-2.5 text-sm md:text-base font-black text-slate-800 shadow-xs">
                 Kelas interaktif yang ceria
               </figcaption>
             </figure>
@@ -85,47 +84,47 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         </section>
 
         {/* FITUR SECTION */}
-        <section id="fitur" className="scroll-mt-24 bg-[#FFFFDB] py-20 md:py-32 border-b-4 border-[#3C632A]">
-          <div className="w-full px-5 md:px-10 xl:px-16">
-            <div className="mb-14 max-w-[60ch] md:mb-20">
-              <h2 className="m-0 text-[clamp(2.2rem,4vw,3.2rem)] font-black leading-tight text-[#3C632A]">
+        <section id="fitur" className="scroll-mt-24 bg-white/70 backdrop-blur-xs py-20 md:py-28 border-y-2 border-amber-200/60">
+          <div className="w-full px-5 md:px-10 xl:px-16 max-w-7xl mx-auto">
+            <div className="mb-14 max-w-[60ch] md:mb-16">
+              <h2 className="m-0 text-[clamp(2.2rem,4vw,3.2rem)] font-black leading-tight text-slate-900 tracking-tight">
                 Satu Tempat, Banyak Petualangan
               </h2>
-              <p className="mt-4 text-[22px] font-bold leading-snug text-[#FF784E]">
+              <p className="mt-3 text-lg md:text-xl font-bold leading-snug text-amber-800">
                 PINTARA punya banyak cara seru untuk belajar. Temukan petualangan yang paling cocok buatmu!
               </p>
             </div>
             
-            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 md:gap-10 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 md:gap-8 lg:grid-cols-3">
               {/* Feature 1 */}
-              <div className="flex flex-col rounded-[24px] bg-[#FFE296] border-4 border-[#3C632A] p-8 transition-transform duration-200 hover:scale-[1.02] hover:-translate-y-1 shadow-lg group">
-                <div className="h-20 w-20 rounded-2xl bg-[#FF5685] border-4 border-[#3C632A] flex items-center justify-center mb-6 group-hover:rotate-6 transition-transform shadow-md">
-                  <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+              <div className="flex flex-col rounded-[32px] bg-white border-2 border-amber-200/80 p-8 transition-transform duration-200 hover:scale-[1.02] hover:-translate-y-1 shadow-sm hover:shadow-md group">
+                <div className="h-16 w-16 rounded-2xl bg-amber-100/90 border border-amber-200 flex items-center justify-center mb-6 group-hover:scale-105 transition-transform shadow-xs">
+                  <svg className="w-8 h-8 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                 </div>
-                <h3 className="m-0 text-[1.6rem] font-black text-[#3C632A]">Kelas Ajaib</h3>
-                <p className="m-0 mt-3 text-[19px] font-bold leading-relaxed text-[#3C632A]">
+                <h3 className="m-0 text-xl font-black text-slate-900">Kelas Ajaib</h3>
+                <p className="m-0 mt-3 text-sm md:text-base font-medium leading-relaxed text-slate-600">
                   Belajar bersama teman-teman dan guru di kelas virtual yang seru. Ada ruang obrolan yang ceria dan asyik!
                 </p>
               </div>
 
               {/* Feature 2 */}
-              <div className="flex flex-col rounded-[24px] bg-[#FFE296] border-4 border-[#3C632A] p-8 transition-transform duration-200 hover:scale-[1.02] hover:-translate-y-1 shadow-lg group">
-                <div className="h-20 w-20 rounded-2xl bg-[#FFBA48] border-4 border-[#3C632A] flex items-center justify-center mb-6 group-hover:rotate-6 transition-transform shadow-md">
-                  <svg className="w-10 h-10 text-[#3C632A]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+              <div className="flex flex-col rounded-[32px] bg-white border-2 border-amber-200/80 p-8 transition-transform duration-200 hover:scale-[1.02] hover:-translate-y-1 shadow-sm hover:shadow-md group">
+                <div className="h-16 w-16 rounded-2xl bg-amber-100/90 border border-amber-200 flex items-center justify-center mb-6 group-hover:scale-105 transition-transform shadow-xs">
+                  <svg className="w-8 h-8 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
                 </div>
-                <h3 className="m-0 text-[1.6rem] font-black text-[#3C632A]">Perintah Suara</h3>
-                <p className="m-0 mt-3 text-[19px] font-bold leading-relaxed text-[#3C632A]">
+                <h3 className="m-0 text-xl font-black text-slate-900">Perintah Suara</h3>
+                <p className="m-0 mt-3 text-sm md:text-base font-medium leading-relaxed text-slate-600">
                   Tinggal bicara, dan PINTARA akan membantumu membuka buku pintar atau mengerjakan tantangan dengan mudah.
                 </p>
               </div>
 
               {/* Feature 3 */}
-              <div className="flex flex-col rounded-[24px] bg-[#FFE296] border-4 border-[#3C632A] p-8 transition-transform duration-200 hover:scale-[1.02] hover:-translate-y-1 shadow-lg group">
-                <div className="h-20 w-20 rounded-2xl bg-[#73B14C] border-4 border-[#3C632A] flex items-center justify-center mb-6 group-hover:rotate-6 transition-transform shadow-md">
-                  <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" /></svg>
+              <div className="flex flex-col rounded-[32px] bg-white border-2 border-amber-200/80 p-8 transition-transform duration-200 hover:scale-[1.02] hover:-translate-y-1 shadow-sm hover:shadow-md group">
+                <div className="h-16 w-16 rounded-2xl bg-amber-100/90 border border-amber-200 flex items-center justify-center mb-6 group-hover:scale-105 transition-transform shadow-xs">
+                  <svg className="w-8 h-8 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" /></svg>
                 </div>
-                <h3 className="m-0 text-[1.6rem] font-black text-[#3C632A]">Isyarat Tangan</h3>
-                <p className="m-0 mt-3 text-[19px] font-bold leading-relaxed text-[#3C632A]">
+                <h3 className="m-0 text-xl font-black text-slate-900">Isyarat Tangan</h3>
+                <p className="m-0 mt-3 text-sm md:text-base font-medium leading-relaxed text-slate-600">
                   Gunakan kamera untuk mengendalikan layar hanya dengan gerakan jari ajaibmu! Bebas gerak sesukamu.
                 </p>
               </div>
@@ -134,26 +133,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         </section>
 
         {/* AKSES / MULAI SECTION */}
-        <section id="akses" className="scroll-mt-24 bg-[#73B14C] py-20 md:py-32">
-          <div className="w-full px-5 md:px-10 xl:px-16">
-            <div className="relative overflow-hidden rounded-[32px] bg-[#FFE296] border-4 border-[#3C632A] p-10 md:p-16 shadow-xl">
-              <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-10 h-64 w-64 rounded-full bg-white/40"></div>
+        <section id="akses" className="scroll-mt-24 py-20 md:py-28">
+          <div className="w-full px-5 md:px-10 xl:px-16 max-w-7xl mx-auto">
+            <div className="relative overflow-hidden rounded-[36px] bg-gradient-to-r from-amber-400 via-amber-400 to-amber-500 border-2 border-amber-300 p-10 md:p-16 shadow-xl shadow-amber-900/10">
               <div className="relative z-10 text-center md:text-left flex flex-col md:flex-row md:items-center justify-between gap-10">
                 <div className="max-w-[46ch]">
-                  <h2 className="m-0 text-[clamp(2.2rem,4vw,3.2rem)] font-black leading-tight text-[#3C632A]">
+                  <h2 className="m-0 text-[clamp(2.2rem,4vw,3.2rem)] font-black leading-tight text-slate-950 tracking-tight">
                     Siap Memulai Petualangan?
                   </h2>
-                  <p className="mt-4 text-[22px] font-bold leading-snug text-[#FF784E]">
+                  <p className="mt-4 text-lg md:text-xl font-bold leading-snug text-slate-900/90">
                     Yuk masuk sekarang dan pilih mode yang paling nyaman buatmu. Temukan keseruan belajar yang sesungguhnya!
                   </p>
                 </div>
-                <div className="flex-shrink-0">
+                <div className="shrink-0">
                   <button
                     onClick={onStart}
-                    className="group relative inline-block min-h-[64px] cursor-pointer overflow-hidden rounded-full border-4 border-[#3C632A] bg-white px-[42px] py-[16px] text-center text-[24px] font-black text-[#3C632A] transition-all duration-300 hover:text-white shadow-md hover:shadow-lg"
+                    className="bg-slate-950 hover:bg-slate-900 text-white px-10 py-5 rounded-full text-xl font-black shadow-xl shadow-slate-950/20 hover:scale-105 transition-all cursor-pointer"
                   >
-                    <span className="relative z-[2]">Ayo Mulai!</span>
-                    <span className="absolute inset-0 z-0 w-0 rounded-full bg-[#FF5685] transition-all duration-300 group-hover:w-full"></span>
+                    Ayo Mulai!
                   </button>
                 </div>
               </div>
@@ -163,17 +160,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       </main>
 
       {/* FOOTER */}
-      <footer className="border-t-4 border-[#3C632A] bg-[#FFBA48] py-12">
-        <div className="flex w-full flex-col items-center gap-6 px-5 text-center md:px-10 xl:px-16">
-          {/* Logo transparent so it shows #FFBA48 */}
+      <footer className="border-t-2 border-amber-200/80 bg-white py-12">
+        <div className="flex w-full flex-col items-center gap-4 px-5 text-center md:px-10 xl:px-16 max-w-5xl mx-auto">
           <div className="flex items-center space-x-3 shrink-0">
             <div className="p-1"><PintaraLogo size="md" /></div>
           </div>
-          <p className="m-0 max-w-[70ch] text-[22px] font-bold leading-relaxed text-[#3C632A]">
+          <p className="m-0 max-w-[70ch] text-base md:text-lg font-medium leading-relaxed text-slate-600">
             PINTARA membantu teman-teman SD belajar dengan ceria dan mandiri. Dilengkapi dengan kontrol suara, isyarat, dan berbagai mode khusus yang ajaib.
           </p>
-          <p className="m-0 mt-2 text-[20px] font-black text-[#3C632A]">
-            © 2026 PINTARA
+          <p className="m-0 mt-2 text-sm font-bold text-slate-500">
+            © 2026 PINTARA. Seluruh hak cipta dilindungi.
           </p>
         </div>
       </footer>

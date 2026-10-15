@@ -2,13 +2,13 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5f8fc;
-  --foreground: #0f172a;
+  --background: #FFF9EE;
+  --foreground: #1E293B;
 }
 
 html {
   zoom: 0.8;
-  min-height: 125vh;
+  min-height: 100vh;
   width: 100%;
 }
 
@@ -27,25 +27,32 @@ html {
 }
 
 body {
-  background: var(--background);
+  background-color: #FFF9EE;
+  background-image: radial-gradient(#F5DCB0 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
   color: var(--foreground);
   font-family: var(--font-baloo), 'Baloo 2', system-ui, -apple-system, sans-serif;
   margin: 0;
   padding: 0;
   overflow-x: hidden;
-  min-height: 125vh;
+  min-height: 100vh;
   width: 100%;
 }
 
-/* Kompensasi Zoom 0.8 agar min-h-screen dan h-screen memenuhi 100% tinggi monitor tanpa celah putih */
+.kids-canvas {
+  background-color: #FFF9EE !important;
+  background-image: radial-gradient(#F5DCB0 1.5px, transparent 1.5px) !important;
+  background-size: 24px 24px !important;
+}
+
 .min-h-screen,
 [class*="min-h-screen"] {
-  min-height: 125vh !important;
+  min-height: 100vh;
 }
 
 .h-screen,
 [class*="h-screen"] {
-  height: 125vh !important;
+  height: 100vh;
 }
 
 @keyframes dotPulse {
@@ -190,14 +197,14 @@ button {
 }
 
 /* =========================================================
-   CUSTOM SCROLLBAR (Harmonious Warm Orange / Amber Theme)
-   Menyatu dengan warna oren #FFBA48 dan aksen karamel #C3631D
+   CUSTOM SCROLLBAR (Harmonious Warm Sunshine / Honey Theme)
+   Menyatu dengan warna butter cream dan aksen amber ceria
    ========================================================= */
 
 /* Firefox & Standard CSS */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #C3631D rgba(195, 99, 29, 0.15);
+  scrollbar-color: #F59E0B rgba(245, 158, 11, 0.15);
 }
 
 /* WebKit & Chromium (Chrome, Edge, Safari, Opera) */
@@ -207,13 +214,13 @@ button {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(195, 99, 29, 0.12);
+  background: rgba(245, 158, 11, 0.1);
   border-radius: 9999px;
   margin: 0;
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: #C3631D;
+  background-color: #F59E0B;
   border-radius: 9999px;
   border: 1px solid transparent;
   background-clip: padding-box;
@@ -221,7 +228,7 @@ button {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: #9A4610;
+  background-color: #D97706;
 }
 
 ::-webkit-scrollbar-button {
@@ -237,7 +244,7 @@ button {
 /* Khusus class .custom-scrollbar */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: #C3631D rgba(195, 99, 29, 0.15);
+  scrollbar-color: #F59E0B rgba(245, 158, 11, 0.15);
 }
 
 .custom-scrollbar::-webkit-scrollbar {
@@ -246,20 +253,20 @@ button {
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(195, 99, 29, 0.12);
+  background: rgba(245, 158, 11, 0.1);
   border-radius: 9999px;
   margin: 0;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #C3631D;
+  background-color: #F59E0B;
   border-radius: 9999px;
   border: 1px solid transparent;
   background-clip: padding-box;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: #9A4610;
+  background-color: #D97706;
 }
 
 .custom-scrollbar::-webkit-scrollbar-button {
@@ -279,3 +286,89 @@ button {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* =========================================================
+   GLOBAL COLOR HARMONY OVERRIDES (Kids EdTech Soft Sunshine Palette)
+   Memastikan seluruh komponen & mini-game terharmonisasi:
+   - Tidak kontras tajam / gelap
+   - Menyelaraskan border lumut, background kusam & teks kontras
+   - Menyatu secara alami dengan warm cream #FFF9EE & sunshine gold
+   ========================================================= */
+
+/* Border overrides */
+[class*="border-[#3C632A]"],
+.border-\[\#3C632A\] {
+  border-color: rgba(251, 191, 36, 0.75) !important;
+}
+
+[class*="border-[#73B14C]"],
+[class*="border-[#7FD13B]"],
+.border-\[\#73B14C\],
+.border-\[\#7FD13B\] {
+  border-color: #34d399 !important;
+}
+
+/* Background overrides */
+[class*="bg-[#3C632A]"],
+.bg-\[\#3C632A\] {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+}
+
+[class*="bg-[#FFE296]"],
+.bg-\[\#FFE296\] {
+  background-color: #ffffff !important;
+}
+
+[class*="bg-[#FFDF59]"],
+.bg-\[\#FFDF59\] {
+  background-color: #fef3c7 !important;
+  color: #0f172a !important;
+}
+
+[class*="bg-[#FFBA48]"],
+.bg-\[\#FFBA48\] {
+  background-color: #f59e0b !important;
+  color: #0f172a !important;
+}
+
+[class*="bg-[#C3631D]"],
+.bg-\[\#C3631D\] {
+  background-color: #f59e0b !important;
+  color: #0f172a !important;
+}
+
+[class*="bg-[#73B14C]"],
+[class*="bg-[#7FD13B]"],
+.bg-\[\#73B14C\],
+.bg-\[\#7FD13B\] {
+  background-color: #10b981 !important;
+  color: #ffffff !important;
+}
+
+[class*="bg-[#0D9488]"],
+.bg-\[\#0D9488\] {
+  background-color: #FFF9EE !important;
+}
+
+/* Text overrides */
+[class*="text-[#3C632A]"],
+.text-\[\#3C632A\] {
+  color: #0f172a !important;
+}
+
+[class*="text-[#5D3A1A]"],
+.text-\[\#5D3A1A\] {
+  color: #0f172a !important;
+}
+
+[class*="text-[#FFDF59]"],
+.text-\[\#FFDF59\] {
+  color: #d97706 !important;
+}
+
+[class*="text-[#C3631D]"],
+.text-\[\#C3631D\] {
+  color: #b45309 !important;
+}
+

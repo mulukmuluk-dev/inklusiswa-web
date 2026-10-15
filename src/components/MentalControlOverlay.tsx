@@ -30,8 +30,13 @@ export function MentalControlOverlay() {
   const [breathCount, setBreathCount] = useState<number>(4);
   const [cyclesCompleted, setCyclesCompleted] = useState<number>(0);
 
-  // 1. Cek Sesi Siswa Aktif
+  // 1. Cek Sesi Siswa Aktif (Hanya aktif di dashboard/platform belajar, BUKAN landing page)
   useEffect(() => {
+    if (!pathname || pathname === "/") {
+      setIsEnabled(false);
+      return;
+    }
+
     const session = getActiveSession();
     if (session && session.role !== "guru" && isMentalModeEnabled(session)) {
       setIsEnabled(true);
@@ -175,7 +180,7 @@ export function MentalControlOverlay() {
     playPopSound();
   };
 
-  if (!isEnabled) return null;
+  if (!isEnabled || !pathname || pathname === "/") return null;
 
   // Perhitungan Geometri Penggaris Baca Kontras Tinggi (Persis Komdigi)
   const barWidth = Math.min(840, Math.max(320, windowWidth - 40));
@@ -275,11 +280,11 @@ export function MentalControlOverlay() {
           aria-modal="true"
           aria-labelledby="mental-breathing-title"
         >
-          <div className="bg-[#243E19] text-white border-4 border-[#3C632A] rounded-[32px] p-6 md:p-10 max-w-lg w-full shadow-2xl flex flex-col items-center text-center relative">
+          <div className="bg-slate-900 text-white border-2 border-amber-300 rounded-[36px] p-6 md:p-10 max-w-lg w-full shadow-2xl flex flex-col items-center text-center relative">
             {/* Header Badge */}
-            <div className="flex items-center gap-2 px-4 py-1.5 bg-[#FFDF59]/20 border border-[#FFDF59]/40 rounded-full mb-3">
-              <div className="w-2 h-2 rounded-full bg-[#FFDF59]" />
-              <span id="mental-breathing-title" className="text-xs font-bold text-[#FFDF59] uppercase tracking-wider">
+            <div className="flex items-center gap-2 px-4 py-1.5 bg-amber-400/20 border border-amber-400/40 rounded-full mb-3">
+              <div className="w-2 h-2 rounded-full bg-amber-400" />
+              <span id="mental-breathing-title" className="text-xs font-bold text-amber-300 uppercase tracking-wider">
                 Jeda Pernapasan Tenang
               </span>
             </div>
@@ -291,30 +296,30 @@ export function MentalControlOverlay() {
               Bernapas teratur membantu merilekskan otot, meredakan rasa cemas, dan mengembalikan fokus belajar.
             </p>
 
-            {/* Lingkaran Napas Organik Alami (Nuansa Hutan & Papan Kelas PINTARA) */}
+            {/* Lingkaran Napas */}
             <div className="my-4 relative flex items-center justify-center w-60 h-60">
-              {/* Cincin Luar Mengembang Lembut */}
+              {/* Cincin Luar */}
               <div
-                className={`absolute inset-0 rounded-full border-4 border-[#73B14C]/30 transition-all duration-[3800ms] ease-in-out ${
+                className={`absolute inset-0 rounded-full border-4 border-amber-400/30 transition-all duration-[3800ms] ease-in-out ${
                   breathPhase === "inhale"
-                    ? "scale-110 bg-[#73B14C]/15"
+                    ? "scale-110 bg-amber-400/15"
                     : breathPhase === "hold"
-                    ? "scale-105 bg-[#73B14C]/25"
-                    : "scale-75 bg-[#73B14C]/5"
+                    ? "scale-105 bg-amber-400/25"
+                    : "scale-75 bg-amber-400/5"
                 }`}
               />
 
-              {/* Lingkaran Inti Bernada Alam */}
+              {/* Lingkaran Inti */}
               <div
-                className={`w-40 h-40 rounded-full border-4 border-[#FFDF59] shadow-xl flex flex-col items-center justify-center transition-all duration-[3800ms] ease-in-out ${
+                className={`w-40 h-40 rounded-full border-4 border-amber-300 shadow-xl flex flex-col items-center justify-center transition-all duration-[3800ms] ease-in-out ${
                   breathPhase === "inhale"
-                    ? "scale-115 bg-[#3C632A]"
+                    ? "scale-115 bg-amber-600"
                     : breathPhase === "hold"
-                    ? "scale-115 bg-[#2A4B1D] ring-8 ring-[#FFDF59]/30"
-                    : "scale-85 bg-[#1C3213]"
+                    ? "scale-115 bg-amber-700 ring-8 ring-amber-400/30"
+                    : "scale-85 bg-slate-800"
                 }`}
               >
-                <span className="text-4xl md:text-5xl font-black text-[#FFDF59]">
+                <span className="text-4xl md:text-5xl font-black text-amber-300">
                   {breathCount}
                 </span>
                 <span className="text-[11px] uppercase font-bold tracking-widest text-white/90 mt-1">
@@ -325,9 +330,9 @@ export function MentalControlOverlay() {
               </div>
             </div>
 
-            {/* Petunjuk Aksi Ramah & Alami */}
+            {/* Petunjuk Aksi Ramah */}
             <div className="space-y-1 mb-8 mt-2">
-              <p className="text-base font-bold text-[#FFDF59]">
+              <p className="text-base font-bold text-amber-300">
                 {breathPhase === "inhale" && "Tarik napas perlahan melalui hidung..."}
                 {breathPhase === "hold" && "Tahan sejenak, rasakan pundak dan lehermu rileks..."}
                 {breathPhase === "exhale" && "Hembuskan perlahan melalui mulut dengan tenang..."}
@@ -339,11 +344,11 @@ export function MentalControlOverlay() {
               )}
             </div>
 
-            {/* Tombol Lanjut Belajar - Gaya Tombol Utama PINTARA */}
+            {/* Tombol Lanjut Belajar */}
             <button
               type="button"
               onClick={handleCloseBreathing}
-              className="w-full py-4 bg-[#73B14C] hover:bg-[#3C632A] text-white font-black text-base rounded-2xl border-4 border-[#3C632A] shadow-md hover:shadow-lg transition-all cursor-pointer active:translate-y-1"
+              className="w-full py-4 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-black text-base rounded-2xl shadow-md hover:shadow-lg transition-all cursor-pointer active:translate-y-1"
             >
               Lanjut Belajar
             </button>
@@ -359,12 +364,12 @@ export function MentalControlOverlay() {
         }`}
       >
         {/* PANEL MENU UTAMA */}
-        <div className="bg-[#243E19]/95 text-white border-y border-l border-[#FFDF59]/40 rounded-l-2xl py-2 px-3.5 flex items-center gap-2.5 backdrop-blur-md shadow-xl shrink-0">
+        <div className="bg-slate-900/95 text-white border-y border-l border-amber-300/40 rounded-l-2xl py-2 px-3.5 flex items-center gap-2.5 backdrop-blur-md shadow-xl shrink-0">
           {/* Label Status Mode */}
           <div className="flex items-center gap-2 pl-1 pr-1">
-            <div className="w-2 h-2 rounded-full bg-[#FFDF59]" />
+            <div className="w-2 h-2 rounded-full bg-amber-400" />
             <div className="flex flex-col whitespace-nowrap">
-              <span className="text-[9px] uppercase font-bold text-[#FFDF59]/80 tracking-wider">
+              <span className="text-[9px] uppercase font-bold text-amber-400 tracking-wider">
                 Mode Mental
               </span>
               <span className="text-xs font-bold text-white/95">
@@ -375,39 +380,39 @@ export function MentalControlOverlay() {
 
           {/* Area Tombol Aksi Clean & Sederhana */}
           <div className="flex items-center gap-2 border-l border-white/15 pl-2.5">
-            {/* Tombol Penggaris Baca (Reading Ruler ala Komdigi) */}
+            {/* Tombol Penggaris Baca */}
             <button
               id="btn-mental-ruler"
               type="button"
               onClick={handleToggleRuler}
               className={`px-3 py-1.5 font-bold text-xs rounded-xl transition-all cursor-pointer shadow-xs flex items-center gap-1.5 border whitespace-nowrap active:translate-y-0.5 ${
                 config.readingRuler
-                  ? "bg-[#FFDF59] text-[#243E19] border-[#FFDF59]"
+                  ? "bg-amber-400 text-slate-950 border-amber-400"
                   : "bg-white/10 hover:bg-white/20 text-white/80 border-white/20"
               }`}
               title="Aktifkan penggaris pemandu membaca baris teks"
             >
-              <span className={`w-1.5 h-1.5 rounded-full ${config.readingRuler ? "bg-[#243E19]" : "bg-white/40"}`} />
+              <span className={`w-1.5 h-1.5 rounded-full ${config.readingRuler ? "bg-slate-950" : "bg-white/40"}`} />
               <span>Penggaris Baca</span>
             </button>
 
-            {/* Tombol Masker Baca (Reading Mask ala Komdigi) */}
+            {/* Tombol Masker Baca */}
             <button
               id="btn-mental-mask"
               type="button"
               onClick={handleToggleMask}
               className={`px-3 py-1.5 font-bold text-xs rounded-xl transition-all cursor-pointer shadow-xs flex items-center gap-1.5 border whitespace-nowrap active:translate-y-0.5 ${
                 config.readingMask
-                  ? "bg-[#FFDF59] text-[#243E19] border-[#FFDF59]"
+                  ? "bg-amber-400 text-slate-950 border-amber-400"
                   : "bg-white/10 hover:bg-white/20 text-white/80 border-white/20"
               }`}
               title="Aktifkan celah sorot untuk membaca 1 baris kalimat"
             >
-              <span className={`w-1.5 h-1.5 rounded-full ${config.readingMask ? "bg-[#243E19]" : "bg-white/40"}`} />
+              <span className={`w-1.5 h-1.5 rounded-full ${config.readingMask ? "bg-slate-950" : "bg-white/40"}`} />
               <span>Masker Baca</span>
             </button>
 
-            {/* Tombol Tarik Napas (Jeda Tenang Alami) */}
+            {/* Tombol Tarik Napas */}
             <button
               id="btn-mental-breathe"
               type="button"
@@ -415,7 +420,7 @@ export function MentalControlOverlay() {
               className="px-3 py-1.5 bg-white/10 hover:bg-white/20 active:bg-white/25 text-white/95 border border-white/20 font-bold text-xs rounded-xl transition-all cursor-pointer shadow-xs whitespace-nowrap active:translate-y-0.5 flex items-center gap-1.5"
               title="Latihan pernapasan rileks sejenak"
             >
-              <svg className="w-3.5 h-3.5 text-[#FFDF59]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
               </svg>
               <span>Tarik Napas</span>
@@ -423,11 +428,11 @@ export function MentalControlOverlay() {
           </div>
         </div>
 
-        {/* TOMBOL HANDLE PENUTUP / PEMBUKA DOCKED KE PINGGIR (PERSIS MEKANISME KAMERA) */}
+        {/* TOMBOL HANDLE PENUTUP / PEMBUKA DOCKED KE PINGGIR */}
         <button
           type="button"
           onClick={() => setIsDocked((prev) => !prev)}
-          className={`bg-[#243E19]/95 hover:bg-[#1C3213] text-[#FFDF59] border border-[#FFDF59]/40 border-l-0 rounded-r-2xl shadow-xl flex items-center justify-center cursor-pointer font-bold text-xs tracking-wide shrink-0 transition-all duration-300 backdrop-blur-md active:scale-95 ${
+          className={`bg-slate-900/95 hover:bg-slate-800 text-amber-300 border border-amber-300/40 border-l-0 rounded-r-2xl shadow-xl flex items-center justify-center cursor-pointer font-bold text-xs tracking-wide shrink-0 transition-all duration-300 backdrop-blur-md active:scale-95 ${
             isDocked ? "w-[80px] px-3 gap-1.5" : "w-[38px] px-2 text-white/70 hover:text-white"
           }`}
           title={isDocked ? "Buka Bilah Bantuan" : "Sembunyikan ke Samping"}
@@ -435,7 +440,7 @@ export function MentalControlOverlay() {
           {isDocked ? (
             <>
               <span>Buka</span>
-              <svg className="w-4 h-4 text-[#FFDF59] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-amber-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
               </svg>
             </>

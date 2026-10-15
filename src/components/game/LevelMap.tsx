@@ -340,13 +340,13 @@ export function LevelMap({ subjectName, progress, onSelectLevel, grade = 1 }: Le
       
       {/* Map Header Title Banner */}
       <div className="text-center mb-8 max-w-2xl">
-        <span className="px-5 py-2 bg-[#C3631D] text-[#FFDF59] font-black text-sm md:text-base rounded-2xl tracking-wider uppercase shadow-md border-4 border-[#3C632A] inline-block mb-3">
+        <span className="px-5 py-2 bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-xs md:text-sm rounded-full tracking-wider uppercase shadow-xs border border-amber-300 inline-block mb-3">
           PETA PETUALANGAN BELAJAR ({levels.length} LEVEL)
         </span>
-        <h2 className="text-3xl md:text-5xl font-black text-[#3C632A] drop-shadow-sm">
+        <h2 className="text-2xl md:text-4xl font-black text-slate-900 tracking-tight">
           {subjectName}
         </h2>
-        <p className="text-[#3C632A] font-extrabold text-sm md:text-lg mt-2">
+        <p className="text-slate-600 font-medium text-sm md:text-base mt-2">
           Pilih level di bawah untuk memulai pembelajaran!
         </p>
       </div>
@@ -369,59 +369,65 @@ export function LevelMap({ subjectName, progress, onSelectLevel, grade = 1 }: Le
               data-gaze-primary={isCurrent ? "true" : undefined}
               data-gaze-current={isCurrent ? "true" : undefined}
               id={`level-button-${lvl.id}`}
-              className={`p-6 rounded-[32px] border-4 border-[#3C632A] flex flex-col items-center justify-between text-center transition-all duration-300 relative shadow-xl group min-h-[220px] ${
+              className={`p-6 rounded-[28px] border-2 flex flex-col items-center justify-between text-center transition-all duration-300 relative group min-h-[220px] ${
                 isCompleted
-                  ? "bg-[#7FD13B] text-white hover:scale-105 cursor-pointer"
+                  ? "bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-900/10 hover:scale-[1.02] cursor-pointer"
                   : isCurrent
-                  ? "bg-[#FFE296] text-[#3C632A] animate-pulse ring-8 ring-[#7FD13B]/60 hover:scale-105 cursor-pointer"
-                  : "bg-slate-200/80 text-slate-500 border-slate-400 cursor-not-allowed opacity-60 shadow-none"
+                  ? "bg-gradient-to-br from-amber-400 to-amber-500 text-slate-950 border-amber-300 ring-4 ring-amber-300/40 shadow-md shadow-amber-900/10 hover:scale-[1.02] cursor-pointer"
+                  : "bg-slate-100/90 text-slate-400 border-slate-200 cursor-not-allowed opacity-60 shadow-none"
               }`}
             >
               {/* Badge Top Header */}
               <div className="w-full flex items-center justify-between mb-2">
-                <span className={`text-xs font-black uppercase px-3 py-1 rounded-xl shadow-sm border-2 border-[#3C632A] ${
-                  isHardLevel ? "bg-[#FF5685] text-white" : "bg-[#C3631D] text-white"
+                <span className={`text-xs font-black uppercase px-3 py-1 rounded-xl shadow-xs border ${
+                  isHardLevel 
+                    ? "bg-purple-100 text-purple-900 border-purple-200" 
+                    : isCompleted 
+                    ? "bg-emerald-600 text-white border-emerald-400" 
+                    : isCurrent 
+                    ? "bg-white/90 text-amber-950 border-amber-200" 
+                    : "bg-slate-200 text-slate-600 border-slate-300"
                 }`}>
                   {isHardLevel ? "Tantangan" : "Dasar"}
                 </span>
 
                 {isCompleted ? (
-                  <div className="flex items-center space-x-1 bg-[#FFDF59] border-2 border-[#3C632A] px-2.5 py-0.5 rounded-full shadow-sm text-[#3C632A] font-black text-xs">
+                  <div className="flex items-center space-x-1 bg-white/95 border border-emerald-200 px-2.5 py-0.5 rounded-full shadow-xs text-emerald-800 font-black text-xs">
                     <span>3 Bintang</span>
                   </div>
                 ) : !isUnlocked ? (
-                  <span className="text-xs font-black bg-slate-300 px-2 py-0.5 rounded-lg border border-slate-500 text-slate-600">
+                  <span className="text-xs font-bold bg-slate-200 px-2.5 py-0.5 rounded-full border border-slate-300 text-slate-500">
                     Terkunci
                   </span>
                 ) : (
-                  <span className="text-xs font-black text-white bg-[#7FD13B] px-2.5 py-0.5 rounded-lg border-2 border-[#3C632A]">
+                  <span className="text-xs font-black text-slate-950 bg-white/90 px-2.5 py-0.5 rounded-full border border-amber-300">
                     AKTIF
                   </span>
                 )}
               </div>
 
               {/* Number Circle Badge */}
-              <div className={`w-20 h-20 md:w-24 md:h-24 rounded-[24px] border-4 border-[#3C632A] flex flex-col items-center justify-center font-black text-2xl md:text-3xl my-2 shadow-md shrink-0 ${
+              <div className={`w-18 h-18 md:w-20 md:h-20 rounded-2xl border-2 flex flex-col items-center justify-center font-black text-2xl my-2 shadow-xs shrink-0 ${
                 isCompleted
-                  ? "bg-white text-[#3C632A]"
+                  ? "bg-white text-emerald-700 border-emerald-200"
                   : isCurrent
-                  ? "bg-[#FFDF59] text-[#3C632A]"
-                  : "bg-slate-300 text-slate-500"
+                  ? "bg-white text-amber-900 border-amber-200"
+                  : "bg-slate-200 text-slate-400 border-slate-300"
               }`}>
-                <span className="text-xs font-extrabold uppercase opacity-75">LEVEL</span>
+                <span className="text-[10px] font-extrabold uppercase opacity-75">LEVEL</span>
                 <span>{lvl.id}</span>
               </div>
 
               {/* Title & Status */}
               <div className="w-full mt-2">
-                <h3 className={`font-black text-lg md:text-xl leading-snug drop-shadow-sm ${
-                  isCompleted ? "text-white" : "text-[#3C632A]"
+                <h3 className={`font-black text-base md:text-lg leading-snug ${
+                  isCompleted ? "text-white" : isCurrent ? "text-slate-950" : "text-slate-500"
                 }`}>
                   {lvl.title}
                 </h3>
 
-                <p className={`text-xs md:text-sm font-extrabold mt-2 ${
-                  isCompleted ? "text-amber-100" : "text-[#3C632A]/80"
+                <p className={`text-xs font-bold mt-2 ${
+                  isCompleted ? "text-emerald-100" : isCurrent ? "text-slate-900/80" : "text-slate-400"
                 }`}>
                   {isCompleted
                     ? "Selesai Sempurna"

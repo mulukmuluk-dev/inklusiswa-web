@@ -53,8 +53,12 @@ export function CognitiveAssistOverlay() {
     plainLangConfigRef.current = config.plainLanguage;
   }, [config.plainLanguage]);
 
-  // 1. Cek Sesi Siswa Aktif
+  // 1. Cek Sesi Siswa Aktif (Hanya aktif di dashboard/belajar, BUKAN landing page)
   useEffect(() => {
+    if (!pathname || pathname === "/") {
+      setIsEnabled(false);
+      return;
+    }
     const session = getActiveSession();
     if (session && session.role !== "guru" && isIntellectualModeEnabled(session)) {
       setIsEnabled(true);

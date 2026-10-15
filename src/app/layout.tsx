@@ -13,12 +13,7 @@ export const metadata: Metadata = {
   description: "Platform E-Learning Sekolah Inklusif Berbasis AI",
 };
 
-import { VoiceControlOverlay } from "@/components/VoiceControlOverlay";
-import { SignControlOverlay } from "@/components/SignControlOverlay";
-import { EyeControlOverlay } from "@/components/EyeControlOverlay";
-import { MotorControlOverlay } from "@/components/MotorControlOverlay";
-import { CognitiveAssistOverlay } from "@/components/CognitiveAssistOverlay";
-import { MentalControlOverlay } from "@/components/MentalControlOverlay";
+import { AccessibilityOverlaysWrapper } from "@/components/AccessibilityOverlaysWrapper";
 
 export default function RootLayout({
   children,
@@ -27,14 +22,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" className={`${baloo2.variable} font-sans antialiased scroll-smooth`}>
-      <body className="bg-[#F8F9FA] text-[#1A1D20] font-sans min-h-screen">
+      <body className="bg-[#FFF9EE] text-slate-800 font-sans min-h-screen">
         {children}
-        <VoiceControlOverlay />
-        <SignControlOverlay />
-        <EyeControlOverlay />
-        <MotorControlOverlay />
-        <CognitiveAssistOverlay />
-        <MentalControlOverlay />
+        <AccessibilityOverlaysWrapper />
       </body>
     </html>
   );

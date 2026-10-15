@@ -88,9 +88,12 @@ export function EyeControlOverlay() {
     setHoveredCardLabel("");
   }, []);
 
-  // 1. Cek apakah sesi siswa mengaktifkan mode kontrol mata (Khusus Siswa Lumpuh Total)
+  // 1. Cek apakah sesi siswa mengaktifkan mode kontrol mata (Khusus Siswa Lumpuh Total - Hanya di dashboard/belajar)
   useEffect(() => {
-    if (isManuallyTurnedOff) return;
+    if (isManuallyTurnedOff || !pathname || pathname === "/") {
+      setIsEnabled(false);
+      return;
+    }
     const session = getActiveSession();
     if (session && session.role !== "guru" && isEyeControlEnabled(session)) {
       setIsEnabled(true);
@@ -890,11 +893,11 @@ export function EyeControlOverlay() {
             }
             playEarcon("wake");
           }}
-          className="px-5 py-3 bg-[#3C632A] hover:bg-[#2F4F20] text-[#FFFFDB] border-3 border-[#FFBA48] rounded-full shadow-md font-black text-xs md:text-sm flex items-center gap-2.5 transition-all cursor-pointer hover:scale-105 active:scale-95"
+          className="px-5 py-3 bg-slate-900 hover:bg-slate-800 text-white border-2 border-amber-300 rounded-full shadow-lg font-black text-xs md:text-sm flex items-center gap-2.5 transition-all cursor-pointer hover:scale-105 active:scale-95"
           title="Aktifkan Kembali Kontrol Mata"
         >
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-          <svg className="w-5 h-5 text-[#FFDF59]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
           </svg>
@@ -909,7 +912,7 @@ export function EyeControlOverlay() {
       {/* Toast Notifikasi Pintasan Gestur 3 Kedipan */}
       {gestureFeedback && (
         <div className="pointer-events-none fixed top-8 left-1/2 transform -translate-x-1/2 z-[10000] animate-in fade-in slide-in-from-top duration-300">
-          <div className="bg-[#3C632A] text-[#FFFFDB] border-4 border-[#FFDF59] shadow-[0_10px_35px_rgba(0,0,0,0.4)] px-7 py-3.5 rounded-full flex items-center space-x-3 text-sm md:text-base font-black">
+          <div className="bg-slate-900 text-white border-2 border-amber-300 shadow-xl px-7 py-3.5 rounded-full flex items-center space-x-3 text-sm md:text-base font-black">
             <svg className="w-6 h-6 text-amber-400 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"/></svg>
             <span>{gestureFeedback}</span>
           </div>
@@ -999,15 +1002,15 @@ export function EyeControlOverlay() {
           isDocked ? "translate-x-[calc(100%-42px)]" : "translate-x-0"
         }`}
       >
-        {/* TAB TOGGLE KAMERA (SATU-SATUNYA TOMBOL UNTUK BUKA/SEMBUNYIKAN PANEL) */}
+        {/* TAB TOGGLE KAMERA */}
         <button
           type="button"
           onClick={() => setIsDocked((prev) => !prev)}
-          className="w-[42px] bg-[#3C632A] text-[#FFFFDB] border-y-3 border-l-3 border-[#FFBA48] rounded-l-2xl py-4 shadow-[-4px_4px_16px_rgba(0,0,0,0.3)] flex flex-col items-center gap-2.5 cursor-pointer hover:bg-[#2F4F20] transition-all shrink-0 z-10"
+          className="w-[42px] bg-slate-900 text-white border-y-2 border-l-2 border-amber-300 rounded-l-2xl py-4 shadow-xl flex flex-col items-center gap-2.5 cursor-pointer hover:bg-slate-800 transition-all shrink-0 z-10"
           title={isDocked ? "Buka Panel Kamera Sensor" : "Sembunyikan Panel Kamera ke Samping"}
         >
           <svg
-            className="w-4 h-4 text-[#FFBA48] transition-transform duration-300"
+            className="w-4 h-4 text-amber-300 transition-transform duration-300"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -1018,16 +1021,16 @@ export function EyeControlOverlay() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" />
             )}
           </svg>
-          <span className="text-[10px] font-black uppercase tracking-wider [writing-mode:vertical-rl] rotate-180 text-[#FFFFDB]">
+          <span className="text-[10px] font-black uppercase tracking-wider [writing-mode:vertical-rl] rotate-180 text-white">
             Kamera
           </span>
         </button>
 
-        {/* CONTAINER UTAMA (Slide In/Out dengan CSS Transform tanpa unmount video) */}
-        <div className="w-72 bg-[#F0FDFA] border-4 border-[#3C632A] rounded-2xl shadow-xl p-4 flex flex-col gap-3 font-sans shrink-0 mr-4">
+        {/* CONTAINER UTAMA */}
+        <div className="w-72 bg-white border-2 border-amber-200/90 rounded-2xl shadow-2xl p-4 flex flex-col gap-3 font-sans shrink-0 mr-4">
           {/* Header Status & Tombol Matikan */}
-          <div className="flex items-center justify-between border-b-2 border-[#3C632A]/20 pb-2">
-            <span className="font-black text-xs text-[#3C632A] flex items-center gap-1.5">
+          <div className="flex items-center justify-between border-b border-amber-100 pb-2">
+            <span className="font-black text-xs text-slate-900 flex items-center gap-1.5">
               <span
                 className={`w-2.5 h-2.5 rounded-full ${
                   faceDetected ? "bg-emerald-500 animate-pulse" : "bg-amber-400"
@@ -1040,7 +1043,7 @@ export function EyeControlOverlay() {
                 : "Mencari Wajah..."}
             </span>
 
-            {/* Tombol Matikan Fitur (Mematikan sensor mata sepenuhnya) */}
+            {/* Tombol Matikan Fitur */}
             <button
               type="button"
               onClick={() => {
@@ -1051,7 +1054,7 @@ export function EyeControlOverlay() {
                   localStorage.removeItem("pintara_eye_control_enabled");
                 }
               }}
-              className="px-2.5 py-1 bg-[#FF5685] hover:bg-[#E03E6B] text-white font-black text-[11px] rounded-lg border border-[#3C632A] flex items-center gap-1 transition-all cursor-pointer shadow-xs"
+              className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-[11px] rounded-lg border border-rose-200 flex items-center gap-1 transition-all cursor-pointer shadow-xs"
               title="Matikan fitur kontrol mata sepenuhnya"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1062,7 +1065,7 @@ export function EyeControlOverlay() {
           </div>
 
           {/* Video Webcam Box */}
-          <div className="relative w-full h-32 bg-slate-900 rounded-xl overflow-hidden border-2 border-[#3C632A]">
+          <div className="relative w-full h-32 bg-slate-900 rounded-xl overflow-hidden border-2 border-amber-200">
             <Webcam
               ref={webcamRef}
               mirrored={true}
@@ -1091,8 +1094,8 @@ export function EyeControlOverlay() {
 
           {/* Dashboard Area Switcher (Jika di Dashboard) */}
           {isDashboard && (
-            <div className="flex items-center justify-between bg-white/80 p-1.5 rounded-xl border-2 border-[#3C632A]/20 text-[11px] font-black">
-              <span className="text-[#3C632A] px-1 text-[10px] uppercase tracking-wider">Area:</span>
+            <div className="flex items-center justify-between bg-amber-50/60 p-1.5 rounded-xl border border-amber-200 text-[11px] font-black">
+              <span className="text-amber-900 px-1 text-[10px] uppercase tracking-wider">Area:</span>
               <div className="flex gap-1">
                 <button
                   type="button"
@@ -1103,8 +1106,8 @@ export function EyeControlOverlay() {
                   }}
                   className={`px-2 py-1 rounded-lg transition-all text-xs font-black cursor-pointer ${
                     dashboardScanArea === "semua"
-                      ? "bg-[#3C632A] text-white shadow-sm"
-                      : "bg-transparent text-[#3C632A]/70 hover:bg-[#3C632A]/10"
+                      ? "bg-amber-500 text-slate-950 shadow-xs"
+                      : "bg-transparent text-slate-600 hover:bg-amber-100/60"
                   }`}
                   title="Putaran otomatis ke Kelas, Mapel & Menu"
                 >
@@ -1119,8 +1122,8 @@ export function EyeControlOverlay() {
                   }}
                   className={`px-2 py-1 rounded-lg transition-all text-xs font-black cursor-pointer ${
                     dashboardScanArea === "sidebar"
-                      ? "bg-[#3C632A] text-white shadow-sm"
-                      : "bg-transparent text-[#3C632A]/70 hover:bg-[#3C632A]/10"
+                      ? "bg-amber-500 text-slate-950 shadow-xs"
+                      : "bg-transparent text-slate-600 hover:bg-amber-100/60"
                   }`}
                 >
                   Sidebar
@@ -1136,8 +1139,8 @@ export function EyeControlOverlay() {
                   }}
                   className={`px-2 py-1 rounded-lg transition-all text-xs font-black cursor-pointer ${
                     dashboardScanArea === "mapel"
-                      ? "bg-[#3C632A] text-white shadow-sm"
-                      : "bg-transparent text-[#3C632A]/70 hover:bg-[#3C632A]/10"
+                      ? "bg-amber-500 text-slate-950 shadow-xs"
+                      : "bg-transparent text-slate-600 hover:bg-amber-100/60"
                   }`}
                 >
                   Mapel
@@ -1146,23 +1149,23 @@ export function EyeControlOverlay() {
             </div>
           )}
 
-          {/* Petunjuk Navigasi Murni Bebas Tangan (Khusus Siswa Lumpuh) */}
-          <div className="space-y-2 text-[11px] font-bold text-[#3C632A]">
-            <div className="p-2.5 bg-[#FFF9E6] border border-[#3C632A]/25 rounded-xl text-[11px] leading-snug text-[#3C632A] shadow-xs">
-              <div className="flex items-center gap-1.5 mb-1.5 font-black text-[#5D3A1A]">
-                <svg className="w-3.5 h-3.5 text-[#3C632A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {/* Petunjuk Navigasi Murni Bebas Tangan */}
+          <div className="space-y-2 text-[11px] font-bold text-slate-800">
+            <div className="p-2.5 bg-amber-50/60 border border-amber-200 rounded-xl text-[11px] leading-snug text-slate-800 shadow-xs">
+              <div className="flex items-center gap-1.5 mb-1.5 font-black text-amber-900">
+                <svg className="w-3.5 h-3.5 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span>Aksesibilitas Mata (Murni Tanpa Tangan)</span>
               </div>
-              <ul className="space-y-1 text-[10.5px] text-[#4B5563]">
+              <ul className="space-y-1 text-[10.5px] text-slate-600">
                 <li className="flex items-start gap-1">
-                  <span className="text-[#3C632A] font-black">•</span>
-                  <span><strong className="text-[#3C632A]">Cara Memilih:</strong> Pejamkan mata ~0.6 detik lalu buka mata saat pilihan yang diinginkan menyala kuning.</span>
+                  <span className="text-amber-800 font-black">•</span>
+                  <span><strong className="text-slate-900">Cara Memilih:</strong> Pejamkan mata ~0.6 detik lalu buka mata saat pilihan yang diinginkan menyala kuning.</span>
                 </li>
                 <li className="flex items-start gap-1">
-                  <span className="text-[#3C632A] font-black">•</span>
-                  <span><strong className="text-[#3C632A]">Loncat Bagian:</strong> Tahan pejamkan mata (merem) selama 2 detik untuk langsung loncat antara Menu Sidebar & Konten Utama / Hero Kelas.</span>
+                  <span className="text-amber-800 font-black">•</span>
+                  <span><strong className="text-slate-900">Loncat Bagian:</strong> Tahan pejamkan mata (merem) selama 2 detik untuk langsung loncat antara Menu Sidebar & Konten Utama / Hero Kelas.</span>
                 </li>
               </ul>
             </div>
