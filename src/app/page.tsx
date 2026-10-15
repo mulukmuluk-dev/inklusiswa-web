@@ -124,13 +124,12 @@ export default function Page() {
     }
   }, [screenState]);
 
-  // 3. Auth Screen Instruction Speech
+  // 3. Pastikan tidak ada suara/ucapan otomatis saat di layar login
   useEffect(() => {
     if (screenState === "auth") {
-      const authInstruction =
-        "Silakan login pada website PINTARA terlebih dahulu. Masukkan kode kelas dan PIN atau masuk sebagai Guru.";
-
-      speakGlobal(authInstruction);
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
     }
   }, [screenState]);
 
@@ -246,6 +245,40 @@ export default function Page() {
           };
           setActiveSession(session);
           localStorage.setItem("pintara_a11y_config", JSON.stringify(config));
+          if (config.mainMode === "fisik_motorik" || config.specificMode === "kesulitan_tangan" || config.physicalControlMethod === "motorik") {
+            localStorage.setItem("pintara_motor_control_enabled", "true");
+            localStorage.removeItem("pintara_eye_control_enabled");
+            if (config.motoricConfig) {
+              localStorage.setItem("pintara_motoric_config", JSON.stringify(config.motoricConfig));
+            }
+          } else {
+            localStorage.removeItem("pintara_motor_control_enabled");
+          }
+
+          if (config.physicalControlMethod === "mata" || config.mainMode === "fisik_mata") {
+            localStorage.setItem("pintara_eye_control_enabled", "true");
+            localStorage.removeItem("pintara_motor_control_enabled");
+          } else if (config.mainMode !== "fisik_motorik") {
+            localStorage.removeItem("pintara_eye_control_enabled");
+          }
+
+          if (config.mainMode === "intelektual") {
+            localStorage.setItem("pintara_intellectual_enabled", "true");
+            if (config.intellectualConfig) {
+              localStorage.setItem("pintara_intellectual_config", JSON.stringify(config.intellectualConfig));
+            }
+          } else {
+            localStorage.removeItem("pintara_intellectual_enabled");
+          }
+
+          if (config.mainMode === "mental") {
+            localStorage.setItem("pintara_mental_enabled", "true");
+            if (config.mentalConfig) {
+              localStorage.setItem("pintara_mental_config", JSON.stringify(config.mentalConfig));
+            }
+          } else {
+            localStorage.removeItem("pintara_mental_enabled");
+          }
           router.push("/dashboard");
         }}
       />

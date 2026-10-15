@@ -29,6 +29,20 @@ import {
   ExamResultRow,
 } from "@/lib/kelasDatabase";
 
+import {
+  StudentProfile,
+  fetchStudents,
+  addStudent,
+  bulkAddStudents,
+  resetStudentPin,
+  deleteStudent,
+  formatWhatsAppStudentAccess,
+  getA11yPresetLabel,
+  parseExcelStudentFile,
+  downloadExcelTemplate,
+  printClassAccountSummary,
+} from "@/lib/studentManager";
+
 import { supabase } from "@/lib/supabaseClient";
 import * as pdfjsLib from "pdfjs-dist";
 
@@ -123,11 +137,20 @@ export default function DashboardPage() {
   const [currentExamQuestionIndex, setCurrentExamQuestionIndex] = useState<number>(0);
 
   // Akses Guru State & Forms
-  const [guruTab, setGuruTab] = useState<"room" | "siswa" | "materi" | "ujian" | "rekap">("room");
+  const [guruTab, setGuruTab] = useState<"room" | "siswa" | "daftar_siswa" | "materi" | "ujian" | "rekap">("room");
   const [hasCreatedRoom, setHasCreatedRoom] = useState<boolean>(false);
   const [teacherRoomCode, setTeacherRoomCode] = useState<string>("INKLU-1234");
   const [teacherRoom, setTeacherRoom] = useState<ClassRoom | null>(null);
   const [guruToast, setGuruToast] = useState<string>("");
+
+  // Daftar Siswa & Manajemen Akun Guru States
+  const [studentsList, setStudentsList] = useState<StudentProfile[]>([]);
+  const [isStudentsLoading, setIsStudentsLoading] = useState<boolean>(false);
+  const [studentSearchQuery, setStudentSearchQuery] = useState<string>("");
+  const [studentRoomFilter, setStudentRoomFilter] = useState<string>("");
+  const [studentFormClassCode, setStudentFormClassCode] = useState<string>("INKLU-1234");
+  const [excelImportLoading, setExcelImportLoading] = useState<boolean>(false);
+  const excelFileInputRef = useRef<HTMLInputElement>(null);
 
   // Guru Form 1: Generate / Connect Room
   const [newRoomCode, setNewRoomCode] = useState<string>("INKLU-1234");
@@ -168,6 +191,7 @@ export default function DashboardPage() {
 
   // Guru Form 4: Announcement
   const [announcementInput, setAnnouncementInput] = useState<string>("");
+  const [newStudentPreset, setNewStudentPreset] = useState<string>("fisik_mata");
 
   // Monitoring Data (fetched from Supabase)
   const [monitorQuizResults, setMonitorQuizResults] = useState<QuizResultRow[]>([]);
@@ -227,6 +251,61 @@ export default function DashboardPage() {
       });
     }
   }, [guruTab, teacherRoomCode]);
+
+  // Inisialisasi Kode Kelas Sticky untuk Pendaftaran Siswa
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedStickyCode = localStorage.getItem("pintara_sticky_class_code");
+      if (savedStickyCode) {
+        setStudentFormClassCode(savedStickyCode);
+      } else if (teacherRoomCode) {
+        setStudentFormClassCode(teacherRoomCode);
+      }
+    }
+  }, [teacherRoomCode]);
+
+  // Fetch data siswa setiap kali tab 'siswa' atau 'daftar_siswa' dibuka
+  useEffect(() => {
+    if (guruTab === "daftar_siswa" || guruTab === "siswa") {
+      setIsStudentsLoading(true);
+      fetchStudents().then((data) => {
+        setStudentsList(data);
+        setIsStudentsLoading(false);
+      }).catch((err) => {
+        console.error("Error fetching students:", err);
+        setIsStudentsLoading(false);
+      });
+    }
+  }, [guruTab, teacherRoomCode]);
+
+  // Handler Import Siswa dari File Excel
+  const handleExcelImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setExcelImportLoading(true);
+    try {
+      const classCode = studentFormClassCode.trim().toUpperCase() || teacherRoomCode;
+      const parsed = await parseExcelStudentFile(file, classCode);
+      if (parsed.length === 0) {
+        showGuruToast("File Excel tidak memuat data nama murid yang valid.");
+        setExcelImportLoading(false);
+        return;
+      }
+
+      const created = await bulkAddStudents(parsed, classCode);
+      setStudentsList((prev) => [...created, ...prev.filter((s) => !created.some((c) => c.id === s.id))]);
+      showGuruToast(`Berhasil menambahkan ${created.length} siswa dari file Excel!`);
+      if (excelFileInputRef.current) {
+        excelFileInputRef.current.value = "";
+      }
+    } catch (err) {
+      console.error("Error importing excel:", err);
+      showGuruToast("Gagal membaca file Excel. Pastikan format kolom sesuai template.");
+    } finally {
+      setExcelImportLoading(false);
+    }
+  };
 
   const showGuruToast = (msg: string) => {
     setGuruToast(msg);
@@ -1007,6 +1086,9 @@ export default function DashboardPage() {
   useEffect(() => {
     let timerId: NodeJS.Timeout;
     if (activeSidebarTab === "ujian" && !examSubmitted && examTimer > 0) {
+      if (userSession?.accessibilityConfig?.mainMode === "intelektual") {
+        return;
+      }
       timerId = setInterval(() => {
         setExamTimer((prev) => prev - 1);
       }, 1000);
@@ -1167,7 +1249,7 @@ export default function DashboardPage() {
       id: "indonesia",
       name: "Bahasa Indonesia",
       image: "/logos/indonesia.png",
-      icon: "📖",
+      icon: "",
       category: "Literasi",
       description: "Kemampuan Membaca, Menulis, Menyimak & Berbicara",
     },
@@ -1175,7 +1257,7 @@ export default function DashboardPage() {
       id: "matematika",
       name: "Matematika",
       image: "/logos/matematika.png",
-      icon: "🧮",
+      icon: "",
       category: "Numerasi",
       description: "Bilangan Cacah, Berhitung, Geometri Dasar & Pengukuran",
     },
@@ -1183,7 +1265,7 @@ export default function DashboardPage() {
       id: "seni-budaya",
       name: "Seni dan Budaya",
       image: "/logos/seni-budaya.png",
-      icon: "🎨",
+      icon: "",
       category: "Kreativitas",
       description: "Seni Rupa, Seni Musik, Seni Teater & Seni Tari",
     },
@@ -1191,7 +1273,7 @@ export default function DashboardPage() {
       id: "inggris",
       name: "Bahasa Inggris",
       image: "/logos/inggris.png",
-      icon: "🌐",
+      icon: "",
       category: "Bahasa",
       description: "Basic Vocabulary, Phonics, Greetings & Everyday English",
     },
@@ -1203,7 +1285,7 @@ export default function DashboardPage() {
       id: "pancasila",
       name: "Pendidikan Pancasila",
       image: "/logos/pkn.png",
-      icon: "🇮🇩",
+      icon: "",
       category: "Karakter",
       description: "Hak & Kewajiban, Keberagaman Budaya, Demokrasi & Gotong Royong",
     },
@@ -1211,7 +1293,7 @@ export default function DashboardPage() {
       id: "indonesia",
       name: "Bahasa Indonesia",
       image: "/logos/indonesia.png",
-      icon: "📖",
+      icon: "",
       category: "Literasi",
       description: "Literasi Kritis, Menulis Paragraf, Teks Cerita & Tata Bahasa",
     },
@@ -1219,7 +1301,7 @@ export default function DashboardPage() {
       id: "matematika",
       name: "Matematika",
       image: "/logos/matematika.png",
-      icon: "🧮",
+      icon: "",
       category: "Numerasi",
       description: "Pecahan, FPB/KPK, Geometri Ruang, Skala & Pengolahan Data",
     },
@@ -1227,7 +1309,7 @@ export default function DashboardPage() {
       id: "ipas",
       name: "Ilmu Pengetahuan Alam dan Sosial (IPAS)",
       image: "/logos/ipas.png",
-      icon: "🔬",
+      icon: "",
       category: "Eksplorasi",
       description: "Sains Alam, Ekosistem, Tubuh Manusia, Lingkungan & Sosial Budaya",
     },
@@ -1235,7 +1317,7 @@ export default function DashboardPage() {
       id: "seni-budaya",
       name: "Seni dan Budaya",
       image: "/logos/seni-budaya.png",
-      icon: "🎨",
+      icon: "",
       category: "Kreativitas",
       description: "Seni Rupa, Seni Musik, Seni Teater & Seni Tari",
     },
@@ -1243,7 +1325,7 @@ export default function DashboardPage() {
       id: "inggris",
       name: "Bahasa Inggris",
       image: "/logos/inggris.png",
-      icon: "🌐",
+      icon: "",
       category: "Bahasa",
       description: "Grammar, Reading Comprehension, Conversation & Writing",
     },
@@ -1303,7 +1385,7 @@ export default function DashboardPage() {
       )}
 
       {/* ==================== 1. SIDEBAR ==================== */}
-      <aside className="w-[300px] mt-24 mb-10 ml-8 bg-[#FFBA48] rounded-[40px] flex flex-col p-6 z-50 overflow-y-auto shadow-[12px_12px_0px_0px_#3C632A] shrink-0 border-4 border-[#3C632A] self-start">
+      <aside className="w-[300px] mt-24 mb-10 ml-8 bg-[#FFBA48] rounded-[40px] flex flex-col p-6 z-50 overflow-y-auto shadow-xl shrink-0 border-4 border-[#3C632A] self-start">
 
         {/* LOGO AREA */}
         <div className="flex flex-col items-center gap-2 mb-4 mt-4">
@@ -1319,7 +1401,7 @@ export default function DashboardPage() {
               onClick={() => setActiveTab("guru")}
               className={`flex items-center gap-4 px-5 py-4 rounded-[28px] font-black text-xl transition-all ${activeTab === "guru" ? "bg-[#3C632A] text-[#FFFFDB]" : "bg-transparent text-[#3C632A] hover:bg-[#3C632A]/10"}`}
             >
-              <div className="w-10 h-10 flex items-center justify-center bg-[#3C632A]/10 rounded-xl shrink-0">
+              <div className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 ${activeTab === "guru" ? "bg-white/20" : "bg-[#3C632A]/10"}`}>
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
               </div>
               Akses Guru
@@ -1344,6 +1426,13 @@ export default function DashboardPage() {
                 className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${guruTab === "siswa" ? "bg-[#3C632A]/10 text-[#3C632A] translate-x-2" : "bg-transparent text-[#3C632A]/70 hover:text-[#3C632A]"}`}
               >
                 Kelola Siswa
+              </button>
+
+              <button
+                onClick={() => setGuruTab("daftar_siswa")}
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${guruTab === "daftar_siswa" ? "bg-[#3C632A]/10 text-[#3C632A] translate-x-2" : "bg-transparent text-[#3C632A]/70 hover:text-[#3C632A]"}`}
+              >
+                Daftar Siswa
               </button>
 
               <button
@@ -1395,8 +1484,8 @@ export default function DashboardPage() {
             id="sidebar-btn-katalog"
             className={`flex items-center gap-4 px-5 py-4 rounded-[28px] font-black text-xl transition-all ${activeTab === "katalog" ? "bg-[#3C632A] text-[#FFFFDB]" : "bg-transparent text-[#3C632A] hover:bg-[#3C632A]/10"}`}
           >
-            <div className={`w-12 h-12 flex items-center justify-center rounded-[18px] shrink-0 ${activeTab === "katalog" ? "bg-[#7FD13B] shadow-inner" : "bg-white/40"}`}>
-              <svg className={`w-7 h-7 ${activeTab === "katalog" ? "text-white" : "text-[#3C632A]"}`} fill="currentColor" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" /></svg>
+            <div className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 ${activeTab === "katalog" ? "bg-white/20" : "bg-[#3C632A]/10"}`}>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
             </div>
             Petualangan Belajar
           </button>
@@ -1409,8 +1498,8 @@ export default function DashboardPage() {
             id="sidebar-btn-kelas"
             className={`flex items-center gap-4 px-5 py-4 rounded-[28px] font-black text-xl transition-all ${activeTab === "kelas" ? "bg-[#3C632A] text-[#FFFFDB]" : "bg-transparent text-[#3C632A] hover:bg-[#3C632A]/10"}`}
           >
-            <div className={`w-12 h-12 flex items-center justify-center rounded-[18px] shrink-0 ${activeTab === "kelas" ? "bg-[#5D9CFF] shadow-inner" : "bg-white/40"}`}>
-              <svg className={`w-7 h-7 ${activeTab === "kelas" ? "text-white" : "text-[#3C632A]"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" /></svg>
+            <div className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 ${activeTab === "kelas" ? "bg-white/20" : "bg-[#3C632A]/10"}`}>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
             </div>
             Kelas Impianku
           </button>
@@ -1475,7 +1564,7 @@ export default function DashboardPage() {
               data-dashboard-area="sidebar"
               data-scan-label={`Mode ${activeMode}`}
               id="sidebar-btn-mode"
-              className="w-full px-5 py-4 bg-white hover:bg-[#FFE296] text-[#3C632A] border-4 border-[#3C632A] shadow-[4px_4px_0px_0px_#3C632A] font-black rounded-[24px] transition-all flex items-center justify-center gap-3"
+              className="w-full px-5 py-4 bg-white hover:bg-[#FFE296] text-[#3C632A] border-4 border-[#3C632A] shadow-md hover:shadow-lg font-black rounded-[24px] transition-all flex items-center justify-center gap-3"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
               {activeMode}
@@ -1487,7 +1576,7 @@ export default function DashboardPage() {
             data-dashboard-area="sidebar"
             data-scan-label="Keluar Akun"
             id="sidebar-btn-logout"
-            className="w-full px-5 py-4 bg-[#FF5685] hover:bg-[#FF784E] border-4 border-[#3C632A] shadow-[4px_4px_0px_0px_#3C632A] text-white font-black rounded-[24px] transition-all flex items-center justify-center gap-3"
+            className="w-full px-5 py-4 bg-[#FF5685] hover:bg-[#FF784E] border-4 border-[#3C632A] shadow-md hover:shadow-lg text-white font-black rounded-[24px] transition-all flex items-center justify-center gap-3"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
             Keluar Akun
@@ -1505,7 +1594,7 @@ export default function DashboardPage() {
           <div className="flex-1 bg-[#FFBA48] rounded-[32px] p-8 mt-24 mr-6 ml-6 mb-10 shadow-xl flex flex-col relative overflow-hidden animate-in fade-in duration-300 border-4 border-white/20">
             <main className="flex-1 w-full overflow-y-auto custom-scrollbar pr-4 space-y-10">
               {/* Header Banner Katalog */}
-              <div className="mb-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6 bg-[#C3631D] border-4 border-[#3C632A] rounded-[32px] p-8 shadow-[8px_8px_0px_0px_#3C632A] relative overflow-hidden">
+              <div className="mb-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6 bg-[#C3631D] border-4 border-[#3C632A] rounded-[32px] p-8 shadow-xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-teal-100/40 via-cyan-50/20 to-transparent rounded-full blur-3xl pointer-events-none" />
 
                 <div className="relative z-10 max-w-2xl">
@@ -1550,8 +1639,8 @@ export default function DashboardPage() {
                     key={cat}
                     onClick={() => setActiveCategory(cat)}
                     className={`px-4 py-2 rounded-2xl text-xs md:text-sm font-black capitalize whitespace-nowrap transition-all border-2 border-[#3C632A] cursor-pointer ${activeCategory === cat
-                      ? "bg-[#3C632A] text-[#FFFFDB] shadow-[3px_3px_0px_0px_#5D3A1A]"
-                      : "bg-white text-[#3C632A] hover:bg-[#FFE296] shadow-[2px_2px_0px_0px_#3C632A]"
+                      ? "bg-[#3C632A] text-[#FFFFDB] shadow-md"
+                      : "bg-white text-[#3C632A] hover:bg-[#FFE296] shadow-sm"
                       }`}
                   >
                     {cat === "semua" ? "Semua Mata Pelajaran" : cat}
@@ -1577,7 +1666,7 @@ export default function DashboardPage() {
                     data-gaze-target={subj.id}
                     data-gaze-label={subj.name}
                     id={`gaze-subject-${subj.id}`}
-                    className="group bg-white border-4 border-[#3C632A] hover:border-[#73B14C] rounded-[32px] p-5 md:p-6 flex flex-col justify-between text-center transition-all duration-300 cursor-pointer shadow-[6px_6px_0px_0px_#3C632A] hover:shadow-[10px_10px_0px_0px_#3C632A] transform hover:-translate-y-1.5 h-full min-h-[380px] md:min-h-[410px]"
+                    className="group bg-white border-4 border-[#3C632A] hover:border-[#73B14C] rounded-[32px] p-5 md:p-6 flex flex-col justify-between text-center transition-all duration-300 cursor-pointer shadow-md hover:shadow-xl transform hover:-translate-y-1.5 h-full min-h-[380px] md:min-h-[410px]"
                   >
                     <div className="flex flex-col items-center flex-1 w-full">
                       {/* Container Ilustrasi Bersih */}
@@ -1599,7 +1688,7 @@ export default function DashboardPage() {
                           style={{ display: subj.image ? "none" : "flex" }}
                           className="w-full h-full rounded-xl bg-white/80 border border-[#3C632A]/20 flex flex-col items-center justify-center text-[#5D3A1A] p-2 text-center"
                         >
-                          <span className="text-5xl md:text-6xl mb-1 drop-shadow-sm">{subj.icon || "📚"}</span>
+                          <svg className="w-16 h-16 text-[#3C632A]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
                         </div>
                       </div>
 
@@ -1636,7 +1725,7 @@ export default function DashboardPage() {
 
                     {/* Tombol Aksi Mulai Belajar */}
                     <div className="mt-5 pt-3.5 border-t-2 border-[#3C632A]/10 w-full shrink-0">
-                      <div className="w-full py-2.5 px-4 bg-[#FFDF59] group-hover:bg-[#7FD13B] text-[#3C632A] group-hover:text-white border-2 border-[#3C632A] rounded-2xl font-black text-xs md:text-sm flex items-center justify-center space-x-2 shadow-[2px_2px_0px_0px_#3C632A] group-hover:shadow-[3px_3px_0px_0px_#3C632A] transition-all">
+                      <div className="w-full py-2.5 px-4 bg-[#FFDF59] group-hover:bg-[#7FD13B] text-[#3C632A] group-hover:text-white border-2 border-[#3C632A] rounded-2xl font-black text-xs md:text-sm flex items-center justify-center space-x-2 shadow-sm group-hover:shadow-md transition-all">
                         <span>Mulai Belajar</span>
                         <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -1659,7 +1748,7 @@ export default function DashboardPage() {
             {/* RIGHT CANVAS CONTENT - EXPANDED / ENLARGED HERO CONTAINER */}
             <main className="flex-1 w-full overflow-y-auto custom-scrollbar pr-4 text-[#3C632A]">
               {/* Top Bar Room Kelas Aktif (Dinamis + Dropdown Riwayat Room) */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 bg-[#C3631D] p-5 md:p-6 rounded-3xl border-4 border-[#3C632A] shadow-[8px_8px_0px_0px_#3C632A]">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 bg-[#C3631D] p-5 md:p-6 rounded-3xl border-4 border-[#3C632A] shadow-xl">
                 {/* Room Aktif (Dropdown Trigger) */}
                 <div ref={roomDropdownRef} className="relative flex items-center space-x-3 max-w-full">
                   <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
@@ -1670,7 +1759,7 @@ export default function DashboardPage() {
                     data-dashboard-area="hero"
                     data-scan-label={activeCode ? `Room: ${activeCode}` : "Pilih Room Kelas"}
                     onClick={() => setShowRoomDropdown(!showRoomDropdown)}
-                    className="px-6 py-3 bg-[#FFDF59] hover:bg-[#FFE296] text-[#5D3A1A] font-black text-sm md:text-base rounded-2xl uppercase tracking-wider shadow-[4px_4px_0px_0px_#5D3A1A] flex items-center space-x-2 transition-all cursor-pointer whitespace-nowrap max-w-[240px] sm:max-w-[380px] md:max-w-[520px]"
+                    className="px-6 py-3 bg-[#FFDF59] hover:bg-[#FFE296] text-[#5D3A1A] font-black text-sm md:text-base rounded-2xl uppercase tracking-wider shadow-md flex items-center space-x-2 transition-all cursor-pointer whitespace-nowrap max-w-[240px] sm:max-w-[380px] md:max-w-[520px]"
                   >
                     <span className="truncate">{activeCode ? `${activeCode} - ${room?.className || `Kelas ${activeCode}`}` : "Pilih Room"}</span>
                     <svg className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${showRoomDropdown ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -1743,7 +1832,7 @@ export default function DashboardPage() {
               {activeSidebarTab === "kelas" && room && (
                 <div className="space-y-8">
                   {/* Pemberitahuan Guru */}
-                  <div className="bg-[#C3631D] border-4 border-[#3C632A] rounded-[32px] p-6 md:p-10 shadow-[8px_8px_0px_0px_#3C632A]">
+                  <div className="bg-[#C3631D] border-4 border-[#3C632A] rounded-[32px] p-6 md:p-10 shadow-xl">
                     <h3 className="text-xl md:text-2xl font-black text-white mb-6 flex items-center space-x-3 drop-shadow-sm">
                       <svg className="w-8 h-8 text-[#FFDF59] fill-current" viewBox="0 0 24 24">
                         <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
@@ -1770,7 +1859,7 @@ export default function DashboardPage() {
                   </div>
 
                   {/* Media Chat Room */}
-                  <div className="bg-[#C3631D] border-4 border-[#3C632A] rounded-[32px] p-6 md:p-10 shadow-[8px_8px_0px_0px_#3C632A] flex flex-col h-[650px]">
+                  <div className="bg-[#C3631D] border-4 border-[#3C632A] rounded-[32px] p-6 md:p-10 shadow-xl flex flex-col h-[650px]">
                     <h3 className="text-xl md:text-2xl font-black text-white mb-6 pb-4 border-b-4 border-white/20 flex items-center space-x-3 drop-shadow-sm">
                       <svg className="w-8 h-8 text-[#FFDF59] fill-current" viewBox="0 0 24 24">
                         <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z" />
@@ -1825,7 +1914,7 @@ export default function DashboardPage() {
                       />
                       <button
                         type="submit"
-                        className="px-8 py-4 bg-[#FFDF59] hover:bg-[#FFE296] text-[#5D3A1A] font-extrabold rounded-full transition-all shadow-[4px_4px_0px_0px_#5D3A1A] hover:scale-105 shrink-0"
+                        className="px-8 py-4 bg-[#FFDF59] hover:bg-[#FFE296] text-[#5D3A1A] font-extrabold rounded-full transition-all shadow-md hover:scale-105 shrink-0"
                       >
                         Kirim Pesan
                       </button>
@@ -1902,7 +1991,7 @@ export default function DashboardPage() {
                 <div className="space-y-6">
                   <h3 className="text-xl md:text-2xl font-black text-[#3C632A] drop-shadow-sm">Latihan Soal ({room.code})</h3>
                   {(room?.quizzes || []).map((quiz) => (
-                    <div key={quiz.id} className="bg-[#C3631D] border-4 border-[#3C632A] rounded-[32px] p-6 md:p-10 shadow-[8px_8px_0px_0px_#3C632A] mb-8">
+                    <div key={quiz.id} className="bg-[#C3631D] border-4 border-[#3C632A] rounded-[32px] p-6 md:p-10 shadow-xl mb-8">
                       <h4 className="text-lg md:text-xl font-black text-[#FFDF59] drop-shadow-sm mb-1">{quiz.title}</h4>
                       <p className="text-xs md:text-sm text-white font-bold mb-6">{quiz.description}</p>
                       <div className="space-y-6">
@@ -1910,7 +1999,7 @@ export default function DashboardPage() {
                           const selectedOpt = quizAnswers[q.id];
                           const isCorrect = selectedOpt === q.answerIndex;
                           return (
-                            <div key={q.id} className="bg-[#C3631D] border-4 border-[#3C632A] rounded-[32px] p-6 md:p-10 shadow-[8px_8px_0px_0px_#3C632A] space-y-5">
+                            <div key={q.id} className="bg-[#C3631D] border-4 border-[#3C632A] rounded-[32px] p-6 md:p-10 shadow-xl space-y-5">
                               <h5 className="font-black text-base md:text-lg lg:text-xl text-white drop-shadow-sm leading-snug">
                                 {qIdx + 1}. {q.question}
                               </h5>
@@ -1990,7 +2079,7 @@ export default function DashboardPage() {
               {/* TAB UJIAN (RUANGGURU SCIENCE COMPETITION STYLE FULLSCREEN MODE) */}
               {activeSidebarTab === "ujian" && room && (
                 <div className="space-y-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 bg-[#C3631D] p-5 md:p-6 rounded-3xl border-4 border-[#3C632A] shadow-[8px_8px_0px_0px_#3C632A]">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 bg-[#C3631D] p-5 md:p-6 rounded-3xl border-4 border-[#3C632A] shadow-xl">
                     <div>
                       <h3 className="text-xl md:text-2xl font-black text-[#FFDF59] drop-shadow-sm">Ujian Resmi ({room.code})</h3>
                       <p className="text-xs md:text-sm font-bold text-white/80 mt-0.5">
@@ -1999,9 +2088,15 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="flex items-center space-x-3">
-                      <span className="text-xs md:text-sm font-bold text-rose-600 bg-rose-50 px-4 py-2 rounded-xl border border-rose-200 shrink-0">
-                        Sisa Waktu: {formatTime(examTimer)}
-                      </span>
+                      {userSession?.accessibilityConfig?.mainMode === "intelektual" ? (
+                        <span className="text-xs md:text-sm font-bold text-[#3C632A] bg-[#FFDF59] px-4 py-2 rounded-xl border-2 border-[#3C632A] shrink-0">
+                          Mode Santai (Bebas Waktu)
+                        </span>
+                      ) : (
+                        <span className="text-xs md:text-sm font-bold text-rose-600 bg-rose-50 px-4 py-2 rounded-xl border border-rose-200 shrink-0">
+                          Sisa Waktu: {formatTime(examTimer)}
+                        </span>
+                      )}
                       <button
                         onClick={toggleExamFullscreen}
                         title="Mode Layar Penuh"
@@ -2022,7 +2117,7 @@ export default function DashboardPage() {
                           const selectedOpt = examAnswers[eq.id];
                           const isEssay = eq.type === "essay" || !eq.options || eq.options.length === 0;
                           return (
-                            <div key={eq.id} className="bg-[#C3631D] border-4 border-[#3C632A] rounded-[32px] p-6 md:p-10 shadow-[8px_8px_0px_0px_#3C632A] space-y-5">
+                            <div key={eq.id} className="bg-[#C3631D] border-4 border-[#3C632A] rounded-[32px] p-6 md:p-10 shadow-xl space-y-5">
                               <div className="flex items-center justify-between pb-2 border-b border-slate-200/80">
                                 <span className={`px-3 py-1 font-extrabold text-xs rounded-lg uppercase tracking-wider ${isEssay ? "bg-purple-100 text-purple-800 border border-purple-200" : "bg-slate-200 text-slate-700"
                                   }`}>
@@ -2069,7 +2164,7 @@ export default function DashboardPage() {
                                       {(examEssayAnswers[eq.id] || "").trim() ? (examEssayAnswers[eq.id] || "").trim().split(/\s+/).length : 0} Kata | {(examEssayAnswers[eq.id] || "").length} Karakter
                                     </span>
                                     {(examEssayAnswers[eq.id] || "").trim() !== "" && (
-                                      <span className="text-emerald-600 font-black">✓ Tersimpan</span>
+                                      <span className="text-emerald-600 font-black">Tersimpan</span>
                                     )}
                                   </div>
                                 </div>
@@ -2135,7 +2230,7 @@ export default function DashboardPage() {
                                 });
                               }
                             }}
-                            className="px-10 py-5 bg-[#FFDF59] hover:bg-[#FFE296] text-[#5D3A1A] border-4 border-[#3C632A] shadow-[6px_6px_0px_0px_#3C632A] font-black text-lg rounded-full transition-all hover:-translate-y-1 active:translate-y-1 active:shadow-none"
+                            className="px-10 py-5 bg-[#FFDF59] hover:bg-[#FFE296] text-[#5D3A1A] border-4 border-[#3C632A] shadow-md font-black text-lg rounded-full transition-all hover:-translate-y-1 active:translate-y-1"
                           >
                             Kumpulkan Ujian
                           </button>
@@ -2193,7 +2288,7 @@ export default function DashboardPage() {
                             <div className="flex-1 flex flex-col">
                               <div
                                 key={eq.id}
-                                className="bg-[#C3631D] border-4 border-[#3C632A] rounded-[32px] p-8 md:p-12 shadow-[8px_8px_0px_0px_#3C632A] space-y-6 flex-1 animate-in fade-in slide-in-from-right-4 duration-300"
+                                className="bg-[#C3631D] border-4 border-[#3C632A] rounded-[32px] p-8 md:p-12 shadow-xl space-y-6 flex-1 animate-in fade-in slide-in-from-right-4 duration-300"
                               >
                                 <div className="flex items-center justify-between pb-4 border-b-2 border-white/20">
                                   <span className={`px-4 py-2 font-black text-sm rounded-xl uppercase tracking-wider ${isEssay ? "bg-purple-100 text-purple-800" : "bg-white/20 text-[#FFDF59]"
@@ -2232,6 +2327,7 @@ export default function DashboardPage() {
                                             if (!examSubmitted) setExamAnswers({ ...examAnswers, [eq.id]: optIdx });
                                           }}
                                           data-quiz-option={opt}
+                                          data-quiz-correct={optIdx === eq.answerIndex ? "true" : "false"}
                                           data-scan-label={`Opsi ${String.fromCharCode(65 + optIdx)}: ${opt}`}
                                           id={`exam-opt-${optIdx}`}
                                           className={`p-6 rounded-2xl text-lg md:text-xl font-extrabold text-left transition-all border-4 flex items-center space-x-6 cursor-pointer ${isSelected
@@ -2259,7 +2355,7 @@ export default function DashboardPage() {
                                   data-scan-label="Soal Sebelumnya"
                                   className={`px-8 py-4 rounded-full font-black text-lg transition-all border-4 cursor-pointer ${currentExamQuestionIndex === 0
                                     ? "bg-slate-200 text-slate-400 border-slate-300 opacity-50 cursor-not-allowed"
-                                    : "bg-white text-[#5D3A1A] border-[#3C632A] shadow-[4px_4px_0px_0px_#3C632A] hover:bg-slate-100 active:translate-y-1 active:shadow-none"
+                                    : "bg-white text-[#5D3A1A] border-[#3C632A] shadow-sm hover:bg-slate-100 active:translate-y-1"
                                     }`}
                                 >
                                   &larr; Soal Sebelumnya
@@ -2270,7 +2366,7 @@ export default function DashboardPage() {
                                     onClick={() => setCurrentExamQuestionIndex(Math.min(exam.questions.length - 1, currentExamQuestionIndex + 1))}
                                     id="btn-exam-next"
                                     data-scan-label="Soal Selanjutnya"
-                                    className="px-8 py-4 bg-[#73B14C] hover:bg-[#3C632A] text-white font-black text-lg rounded-full border-4 border-[#3C632A] shadow-[4px_4px_0px_0px_#3C632A] transition-all active:translate-y-1 active:shadow-none cursor-pointer"
+                                    className="px-8 py-4 bg-[#73B14C] hover:bg-[#3C632A] text-white font-black text-lg rounded-full border-4 border-[#3C632A] shadow-md transition-all active:translate-y-1 cursor-pointer"
                                   >
                                     Soal Selanjutnya &rarr;
                                   </button>
@@ -2308,12 +2404,12 @@ export default function DashboardPage() {
                                         });
                                       }
                                     }}
-                                    className={`px-8 py-4 font-black text-lg rounded-full border-4 shadow-[4px_4px_0px_0px_#3C632A] transition-all ${examSubmitted
+                                    className={`px-8 py-4 font-black text-lg rounded-full border-4 shadow-md transition-all ${examSubmitted
                                       ? "bg-slate-300 text-slate-500 border-slate-400 cursor-not-allowed shadow-none translate-y-1"
-                                      : "bg-[#FFDF59] hover:bg-[#FFE296] text-[#5D3A1A] border-[#3C632A] active:translate-y-1 active:shadow-none"
+                                      : "bg-[#FFDF59] hover:bg-[#FFE296] text-[#5D3A1A] border-[#3C632A] active:translate-y-1"
                                       }`}
                                   >
-                                    {examSubmitted ? "Ujian Telah Terkumpul" : "Kumpulkan Seluruh Jawaban ✓"}
+                                    {examSubmitted ? "Ujian Telah Terkumpul" : "Kumpulkan Seluruh Jawaban"}
                                   </button>
                                 )}
                               </div>
@@ -2327,10 +2423,18 @@ export default function DashboardPage() {
                     <aside className="w-96 bg-[#FFF4D2] border-l-4 border-[#3C632A] flex flex-col shrink-0 shadow-[-8px_0_20px_rgba(0,0,0,0.15)] z-10 hidden lg:flex">
                       {/* Timer Widget */}
                       <div className="p-8 border-b-4 border-[#3C632A] bg-white text-center">
-                        <h4 className="text-base font-black text-[#5D3A1A] uppercase tracking-wider mb-3">Sisa Waktu Anda</h4>
-                        <div className="text-4xl font-black text-rose-600 bg-rose-50 py-4 rounded-2xl border-4 border-rose-200 shadow-inner tracking-widest">
-                          {formatTime(examTimer)}
-                        </div>
+                        <h4 className="text-base font-black text-[#5D3A1A] uppercase tracking-wider mb-3">
+                          {userSession?.accessibilityConfig?.mainMode === "intelektual" ? "Status Waktu" : "Sisa Waktu Anda"}
+                        </h4>
+                        {userSession?.accessibilityConfig?.mainMode === "intelektual" ? (
+                          <div className="text-lg font-black text-[#3C632A] bg-[#FFDF59] py-4 px-2 rounded-2xl border-4 border-[#3C632A] shadow-inner">
+                            Bebas Waktu (Santai)
+                          </div>
+                        ) : (
+                          <div className="text-4xl font-black text-rose-600 bg-rose-50 py-4 rounded-2xl border-4 border-rose-200 shadow-inner tracking-widest">
+                            {formatTime(examTimer)}
+                          </div>
+                        )}
                       </div>
 
                       {/* Navigation Grid */}
@@ -2348,7 +2452,7 @@ export default function DashboardPage() {
                                   ? "ring-4 ring-offset-2 ring-[#FFBA48] scale-110 z-10"
                                   : "hover:scale-105"
                                   } ${isAnswered
-                                    ? "bg-[#7FD13B] text-white border-[#3C632A] shadow-[2px_2px_0px_0px_#3C632A]"
+                                    ? "bg-[#7FD13B] text-white border-[#3C632A] shadow-sm"
                                     : "bg-white text-[#5D3A1A] border-slate-300 shadow-sm"
                                   }`}
                               >
@@ -2432,7 +2536,7 @@ export default function DashboardPage() {
                   )}
 
                   {/* Teacher Portal Main Hero Header Card (DENGAN SELECTOR ROOM AKTIF DINAMIS) */}
-                  <div className="bg-[#C3631D] border-4 border-[#3C632A] rounded-[32px] p-8 md:p-10 shadow-[8px_8px_0px_0px_#3C632A] flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8 mb-8">
+                  <div className="bg-[#C3631D] border-4 border-[#3C632A] rounded-[32px] p-8 md:p-10 shadow-xl flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8 mb-8">
                     <div className="space-y-3 max-w-2xl">
                       <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-[#FFDF59] tracking-tight leading-tight drop-shadow-md">
                         Akses & Manajemen Room Guru
@@ -2443,7 +2547,7 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Selector Room Aktif Yang Dikelola Guru (Dinamis Sesuai Room Yang Dibuat) */}
-                    <div className="bg-[#C3631D] border-4 border-[#3C632A] rounded-2xl p-5 md:p-6 w-full lg:w-auto shrink-0 space-y-3 shadow-[6px_6px_0px_0px_#3C632A] relative z-10">
+                    <div className="bg-[#C3631D] border-4 border-[#3C632A] rounded-2xl p-5 md:p-6 w-full lg:w-auto shrink-0 space-y-3 shadow-md relative z-10">
                       <div className="text-xs md:text-sm font-black text-[#FFDF59] uppercase tracking-wider">
                         Room Yang Dikelola:
                       </div>
@@ -2476,7 +2580,7 @@ export default function DashboardPage() {
                             navigator.clipboard?.writeText(teacherRoomCode);
                             showGuruToast(`Kode room "${teacherRoomCode}" berhasil disalin ke clipboard!`);
                           }}
-                          className="px-5 py-3 bg-[#73B14C] hover:bg-[#3C632A] text-white font-black text-xs md:text-sm rounded-xl border-4 border-[#3C632A] shadow-[4px_4px_0px_0px_#3C632A] transition-colors cursor-pointer shrink-0 w-full sm:w-auto active:translate-y-1 active:shadow-none"
+                          className="px-5 py-3 bg-[#73B14C] hover:bg-[#3C632A] text-white font-black text-xs md:text-sm rounded-xl border-4 border-[#3C632A] shadow-md transition-colors cursor-pointer shrink-0 w-full sm:w-auto active:translate-y-1"
                         >
                           Salin Kode
                         </button>
@@ -2508,6 +2612,15 @@ export default function DashboardPage() {
                         }`}
                     >
                       Kelola Siswa
+                    </button>
+                    <button
+                      onClick={() => setGuruTab("daftar_siswa")}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap ${guruTab === "daftar_siswa"
+                        ? "bg-[#FFBA48] text-[#3C632A] shadow-md border-2 border-[#3C632A]"
+                        : "text-slate-600 hover:bg-[#FFE296] border-2 border-transparent"
+                        }`}
+                    >
+                      Daftar Siswa
                     </button>
 
 
@@ -2580,101 +2693,122 @@ export default function DashboardPage() {
 
                   {/* GURU SUB-TAB 1: UPLOAD MATERI (WITH AI PRACTICE CHECKBOX) */}
 
-                  {/* GURU SUB-TAB: KELOLA SISWA */}
+                  {/* GURU SUB-TAB: KELOLA SISWA (PENDAFTARAN SISWA) */}
                   {guruTab === "siswa" && (
-                    <div className="bg-[#FFDF59] border-4 border-[#3C632A] rounded-[32px] p-8 md:p-12 shadow-[8px_8px_0px_0px_#3C632A] space-y-8 animate-in fade-in duration-200 mt-6">
-                      <h2 className="text-2xl font-black text-[#5D3A1A] drop-shadow-sm mb-4">Kelola Murid & PIN Akses</h2>
-                      <p className="text-[#5D3A1A]/80 font-bold mb-8">Tambahkan murid ke kelas ini. Sistem akan otomatis membuatkan PIN rahasia untuk login.</p>
-
-                      <form onSubmit={async (e) => {
-                        e.preventDefault();
-                        const form = e.target as any;
-                        const name = form.elements.studentName.value;
-                        const preset = form.elements.preset.value;
-                        const studentJenjang = form.elements.studentJenjang.value;
-                        const avatar = form.elements.avatar.value;
-
-                        // Generate Random 4 Digit PIN
-                        const pin = Math.floor(1000 + Math.random() * 9000).toString();
-
-                        // Create Supabase Profile for Student
-                        const pseudoId = crypto.randomUUID();
-                        const email = `${pseudoId}@pintara.local`;
-
-                        try {
-                          // Set full accessibility config object based on preset
-                          const a11yConfig: any = { pin_code: pin, jenjang: studentJenjang };
-                          if (preset === "fisik_mata") {
-                            a11yConfig.mainMode = "fisik_mata";
-                            a11yConfig.specificMode = "lumpuh_total";
-                            a11yConfig.physicalControlMethod = "mata";
-                          } else if (preset === "fisik_suara") {
-                            a11yConfig.mainMode = "fisik_suara";
-                            a11yConfig.specificMode = "lumpuh_total";
-                            a11yConfig.physicalControlMethod = "suara";
-                          } else if (preset === "fisik_motorik") {
-                            a11yConfig.mainMode = "fisik_motorik";
-                            a11yConfig.specificMode = "kesulitan_tangan";
-                            a11yConfig.physicalControlMethod = "motorik";
-                          } else if (preset === "sensorik_tunanetra") {
-                            a11yConfig.mainMode = "sensorik_tunanetra";
-                            a11yConfig.specificMode = "tunanetra";
-                          } else if (preset === "sensorik_tunarungu") {
-                            a11yConfig.mainMode = "sensorik_tunarungu";
-                            a11yConfig.specificMode = "tunarungu";
-                            a11yConfig.physicalControlMethod = "isyarat";
-                          } else if (preset === "intelektual") {
-                            a11yConfig.mainMode = "intelektual";
-                          } else if (preset === "mental") {
-                            a11yConfig.mainMode = "mental";
-                          } else {
-                            a11yConfig.mainMode = preset;
-                          }
-
-                          await supabase.from("profiles").upsert({
-                            id: pseudoId,
-                            email: email,
-                            full_name: name,
-                            role: "siswa",
-                            jenjang: studentJenjang,
-                            current_room_code: teacherRoomCode,
-                            avatar_url: avatar,
-                            accessibility_config: a11yConfig
-                          });
-
-                          // Download Card
-                          const cardHtml = `
-                  <html><body style="font-family:sans-serif; text-align:center; padding: 40px; background: #FFBA48; border: 10px solid #3C632A; border-radius: 20px; width: 300px; margin: 0 auto; margin-top: 50px;">
-                    <h1 style="color: #3C632A;">PINTARA</h1>
-                    <h2>Kartu Akses Siswa</h2>
-                    <h3 style="background: white; padding: 10px; border-radius: 10px;">Nama: ${name}</h3>
-                    <h3 style="background: white; padding: 10px; border-radius: 10px;">Jenjang: ${studentJenjang}</h3>
-                    <h3 style="background: white; padding: 10px; border-radius: 10px;">Kode Kelas: ${teacherRoomCode}</h3>
-                    <h1 style="background: white; padding: 20px; border-radius: 10px; font-size: 40px; color: #FF5685; letter-spacing: 5px;">${pin}</h1>
-                    <p>Simpan kode ini dengan aman ya!</p>
-                  </body></html>
-                `;
-                          const blob = new Blob([cardHtml], { type: 'text/html' });
-                          const url = URL.createObjectURL(blob);
-                          const a = document.createElement('a');
-                          a.href = url;
-                          a.download = `Kartu_Akses_${name}.html`;
-                          a.click();
-                          URL.revokeObjectURL(url);
-
-                          alert(`Siswa ${name} (${studentJenjang}) berhasil ditambah! Kartu akses sedang diunduh.`);
-                          e.target.reset();
-                        } catch (err) {
-                          console.error(err);
-                          alert("Gagal menyimpan siswa.");
-                        }
-                      }} className="flex flex-col gap-6 w-full max-w-xl">
-
+                    <div className="bg-[#FFDF59] border-4 border-[#3C632A] rounded-[32px] p-8 md:p-12 shadow-xl space-y-8 animate-in fade-in duration-200 mt-6">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b-4 border-[#3C632A]/20 pb-6">
                         <div>
-                          <label className="block font-black text-[#5D3A1A] drop-shadow-sm mb-2">Nama Murid</label>
-                          <input name="studentName" required className="w-full px-4 py-3 bg-[#F8F9FA] border-4 border-[#3C632A] rounded-xl font-bold text-[#5D3A1A]" placeholder="Misal: Budi Santoso" />
+                          <h2 className="text-2xl md:text-3xl font-black text-[#5D3A1A] drop-shadow-sm">Kelola Murid & Pendaftaran Akun</h2>
+                          <p className="text-sm md:text-base text-[#5D3A1A]/80 font-bold mt-1">
+                            Daftarkan murid satu per satu atau import data kolektif sekaligus menggunakan file Excel.
+                          </p>
                         </div>
 
+                        {/* Tombol Import Excel & Navigasi ke Tabel */}
+                        <div className="flex flex-wrap items-center gap-3">
+                          <input
+                            ref={excelFileInputRef}
+                            type="file"
+                            accept=".xlsx,.xls,.csv"
+                            onChange={handleExcelImport}
+                            className="hidden"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => excelFileInputRef.current?.click()}
+                            disabled={excelImportLoading}
+                            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs md:text-sm rounded-xl border-2 border-[#3C632A] shadow-sm flex items-center gap-2 transition-all cursor-pointer active:translate-y-0.5"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                            <span>{excelImportLoading ? "Mengimpor..." : "Import dari File Excel"}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={downloadExcelTemplate}
+                            className="px-4 py-2.5 bg-white hover:bg-slate-100 text-[#5D3A1A] font-black text-xs md:text-sm rounded-xl border-2 border-[#3C632A] shadow-sm flex items-center gap-2 transition-all cursor-pointer active:translate-y-0.5"
+                          >
+                            <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                            <span>Unduh Template Excel</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setGuruTab("daftar_siswa")}
+                            className="px-4 py-2.5 bg-[#FFBA48] hover:bg-[#FFA500] text-[#5D3A1A] font-black text-xs md:text-sm rounded-xl border-2 border-[#3C632A] shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:translate-y-0.5"
+                          >
+                            <span>Lihat Tabel Daftar Siswa →</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <form
+                        onSubmit={async (e) => {
+                          e.preventDefault();
+                          const form = e.target as any;
+                          const name = form.elements.studentName.value;
+                          const preset = form.elements.preset.value;
+                          const studentJenjang = form.elements.studentJenjang.value;
+                          const classCode = studentFormClassCode.trim().toUpperCase() || teacherRoomCode;
+
+                          try {
+                            const newStudent = await addStudent({
+                              name: name,
+                              jenjang: studentJenjang,
+                              roomCode: classCode,
+                              preset: preset,
+                            });
+
+                            // Perbarui state tabel siswa secara real-time
+                            setStudentsList((prev) => [newStudent, ...prev.filter((s) => s.id !== newStudent.id)]);
+
+                            // Simpan kode kelas di localStorage agar tetap ada
+                            localStorage.setItem("pintara_sticky_class_code", classCode);
+
+                            // Tampilkan notifikasi toast hijau
+                            showGuruToast(`Siswa ${newStudent.full_name} berhasil ditambahkan!`);
+
+                            // Reset hanya input nama murid, kode kelas TETAP ADA agar guru tidak pegal mengetik ulang!
+                            if (form.elements.studentName) {
+                              form.elements.studentName.value = "";
+                              form.elements.studentName.focus();
+                            }
+                          } catch (err) {
+                            console.error(err);
+                            alert("Gagal menyimpan siswa.");
+                          }
+                        }}
+                        className="flex flex-col gap-6 w-full max-w-xl"
+                      >
+                        {/* 1. KODE KELAS */}
+                        <div>
+                          <label className="block font-black text-[#5D3A1A] drop-shadow-sm mb-2">Kode Kelas</label>
+                          <input
+                            type="text"
+                            required
+                            value={studentFormClassCode}
+                            onChange={(e) => {
+                              const val = e.target.value.toUpperCase();
+                              setStudentFormClassCode(val);
+                              localStorage.setItem("pintara_sticky_class_code", val);
+                            }}
+                            className="w-full px-4 py-3 bg-[#F8F9FA] border-4 border-[#3C632A] rounded-xl font-bold text-[#5D3A1A] uppercase"
+                            placeholder="Misal: SD4B"
+                          />
+                        </div>
+
+                        {/* 2. NAMA MURID */}
+                        <div>
+                          <label className="block font-black text-[#5D3A1A] drop-shadow-sm mb-2">Nama Murid</label>
+                          <input
+                            name="studentName"
+                            required
+                            className="w-full px-4 py-3 bg-[#F8F9FA] border-4 border-[#3C632A] rounded-xl font-bold text-[#5D3A1A]"
+                            placeholder="Misal: Budi Santoso"
+                          />
+                        </div>
+
+                        {/* 3. JENJANG SD */}
                         <div>
                           <label className="block font-black text-[#5D3A1A] drop-shadow-sm mb-2">Kelas / Jenjang SD Murid</label>
                           <select name="studentJenjang" className="w-full px-4 py-3 bg-[#F8F9FA] border-4 border-[#3C632A] rounded-xl font-bold text-[#5D3A1A]">
@@ -2687,39 +2821,289 @@ export default function DashboardPage() {
                           </select>
                         </div>
 
+                        {/* 4. PRESET AKSESIBILITAS */}
                         <div>
                           <label className="block font-black text-[#5D3A1A] drop-shadow-sm mb-2">Mode Aksesibilitas Khusus</label>
-                          <select name="preset" className="w-full px-4 py-3 bg-[#F8F9FA] border-4 border-[#3C632A] rounded-xl font-bold text-[#5D3A1A]">
+                          <select
+                            name="preset"
+                            value={newStudentPreset}
+                            onChange={(e) => setNewStudentPreset(e.target.value)}
+                            className="w-full px-4 py-3 bg-[#F8F9FA] border-4 border-[#3C632A] rounded-xl font-bold text-[#5D3A1A]"
+                          >
+                            <option value="fisik_motorik_tremor">Fisik - Motorik Halus (Anti-Tremor / Tahan)</option>
+                            <option value="fisik_motorik_switch">Fisik - Motorik Halus (Sakelar Tunggal / Auto-Scan)</option>
                             <option value="fisik_mata">Fisik - Lumpuh Total (Kontrol Mata / Eye Tracking)</option>
                             <option value="fisik_suara">Fisik - Lumpuh Total (Kontrol Suara / Voice)</option>
-                            <option value="fisik_motorik">Fisik - Kesulitan Tangan / Motorik Halus</option>
                             <option value="sensorik_tunanetra">Sensorik - Tunanetra (Suara & TTS)</option>
                             <option value="sensorik_tunarungu">Sensorik - Tunarungu (Bahasa Isyarat SIBI)</option>
-                            <option value="intelektual">Intelektual (Pendampingan Kognitif)</option>
+                            <option value="intelektual_slow">Intelektual - Lamban Belajar (Bebas Waktu & Pendampingan)</option>
+                            <option value="intelektual_konkret">Intelektual - Pemahaman Konkret & Piktogram</option>
                             <option value="mental">Mental (Ramah Sensori)</option>
                           </select>
                         </div>
 
-                        <div>
-                          <label className="block font-black text-[#5D3A1A] drop-shadow-sm mb-2">Pilih Avatar Karakter</label>
-                          <div className="flex gap-4">
-                            <label className="cursor-pointer">
-                              <input type="radio" name="avatar" value="/images/avatars/cat.png" className="hidden peer" defaultChecked />
-                              <div className="w-16 h-16 bg-slate-100 rounded-full border-4 border-transparent peer-checked:border-[#73B14C] peer-checked:scale-110 transition-all bg-cover bg-center" style={{ backgroundImage: "url('/images/default_avatar.png')" }}></div>
-                            </label>
-                            {/* Additional avatars can be added here */}
-                          </div>
-                        </div>
+                        {/* Avatar dihapus sesuai instruksi */}
 
-                        <button type="submit" className="px-6 py-4 bg-[#73B14C] hover:bg-[#3C632A] text-white border-4 border-[#3C632A] shadow-[4px_4px_0px_0px_#3C632A] font-black rounded-full text-xl transition-all w-full">
-                          Tambahkan Murid
+                        <button
+                          type="submit"
+                          className="px-6 py-4 bg-[#73B14C] hover:bg-[#3C632A] text-white border-4 border-[#3C632A] shadow-md hover:shadow-lg font-black rounded-full text-xl transition-all w-full cursor-pointer active:translate-y-1"
+                        >
+                          Simpan Siswa
                         </button>
                       </form>
                     </div>
                   )}
 
+                  {/* GURU SUB-TAB: DAFTAR SISWA (MASTER VIEW GURU) */}
+                  {guruTab === "daftar_siswa" && (
+                    <div className="bg-[#FFDF59] border-4 border-[#3C632A] rounded-[32px] p-6 md:p-10 shadow-xl space-y-6 animate-in fade-in duration-200 mt-6">
+                      {/* HEADER & ACTION BUTTONS */}
+                      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b-4 border-[#3C632A]/20 pb-6">
+                        <div>
+                          <div className="flex items-center gap-2.5">
+                            <h2 className="text-2xl md:text-3xl font-black text-[#5D3A1A] drop-shadow-sm">
+                              Daftar Siswa & Manajemen Akun
+                            </h2>
+                            <span className="px-3 py-1 bg-[#3C632A] text-[#FFFFDB] text-xs font-black rounded-full uppercase tracking-wider">
+                              Master View
+                            </span>
+                          </div>
+                          <p className="text-sm md:text-base text-[#5D3A1A]/80 font-bold mt-1">
+                            Lihat akun murid, salin akses WhatsApp wali murid, reset PIN secara instan, dan cetak kartu akun kelas.
+                          </p>
+                        </div>
+
+                        {/* TOMBOL UTAMA: CETAK REKAP AKUN KELAS */}
+                        <div className="flex flex-wrap items-center gap-3 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const targetRoom = studentRoomFilter || teacherRoomCode;
+                              const toPrint = studentsList.filter(
+                                (s) => !targetRoom || s.current_room_code?.toUpperCase() === targetRoom.toUpperCase()
+                              );
+                              if (toPrint.length === 0) {
+                                showGuruToast("Tidak ada murid yang terdaftar untuk kelas ini.");
+                                return;
+                              }
+                              printClassAccountSummary(toPrint, targetRoom);
+                            }}
+                            className="px-6 py-3.5 bg-[#73B14C] hover:bg-[#3C632A] text-white border-4 border-[#3C632A] rounded-2xl font-black text-sm md:text-base shadow-md hover:shadow-lg flex items-center gap-2.5 transition-all cursor-pointer active:translate-y-1"
+                          >
+                            <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                            <span>Cetak Rekap Akun Kelas</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setGuruTab("siswa")}
+                            className="px-5 py-3.5 bg-white hover:bg-slate-100 text-[#5D3A1A] border-4 border-[#3C632A] rounded-2xl font-black text-sm md:text-base shadow-md hover:shadow-lg flex items-center gap-2 transition-all cursor-pointer active:translate-y-1"
+                          >
+                            <span>+ Tambah Murid</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* FILTER & PENCARIAN BAR */}
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-white/40 border-2 border-[#3C632A]/30 p-4 rounded-2xl">
+                        <div className="flex-1 flex items-center gap-3">
+                          <div className="relative flex-1 max-w-md">
+                            <input
+                              type="text"
+                              value={studentSearchQuery}
+                              onChange={(e) => setStudentSearchQuery(e.target.value)}
+                              placeholder="Cari nama murid atau PIN..."
+                              className="w-full pl-10 pr-4 py-2.5 bg-white border-2 border-[#3C632A] rounded-xl font-bold text-sm text-[#5D3A1A] placeholder-[#5D3A1A]/40 focus:outline-none focus:ring-2 focus:ring-[#73B14C]"
+                            />
+                            <svg className="w-5 h-5 text-[#5D3A1A]/60 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                          </div>
+
+                          <div className="shrink-0 flex items-center gap-2">
+                            <label className="text-xs font-black text-[#5D3A1A] uppercase tracking-wide hidden sm:inline">Room:</label>
+                            <select
+                              value={studentRoomFilter}
+                              onChange={(e) => setStudentRoomFilter(e.target.value)}
+                              className="px-3 py-2.5 bg-white border-2 border-[#3C632A] rounded-xl font-bold text-xs md:text-sm text-[#5D3A1A] focus:outline-none"
+                            >
+                              <option value="">Semua Room Kelas</option>
+                              {Array.from(new Set(studentsList.map((s) => s.current_room_code).filter(Boolean))).map((code) => (
+                                <option key={code} value={code}>Kelas {code}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="shrink-0 text-right">
+                          <span className="text-xs md:text-sm font-black text-[#5D3A1A] bg-white px-3.5 py-1.5 rounded-full border-2 border-[#3C632A]">
+                            Total: <strong>{studentsList.filter((s) => !studentRoomFilter || s.current_room_code?.toUpperCase() === studentRoomFilter.toUpperCase()).length}</strong> Siswa
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* TABEL RESPONSIVE */}
+                      <div className="overflow-x-auto bg-white border-4 border-[#3C632A] rounded-2xl shadow-md">
+                        {isStudentsLoading ? (
+                          <div className="py-16 text-center text-[#5D3A1A] font-bold text-lg">
+                            Memuat data siswa...
+                          </div>
+                        ) : (() => {
+                          const filtered = studentsList.filter((s) => {
+                            const matchesRoom = !studentRoomFilter || s.current_room_code?.toUpperCase() === studentRoomFilter.toUpperCase();
+                            const q = studentSearchQuery.toLowerCase().trim();
+                            const matchesQ =
+                              !q ||
+                              s.full_name?.toLowerCase().includes(q) ||
+                              (s.pin_code && s.pin_code.includes(q)) ||
+                              (s.accessibility_config?.pin_code && s.accessibility_config.pin_code.includes(q));
+                            return matchesRoom && matchesQ;
+                          });
+
+                          if (filtered.length === 0) {
+                            return (
+                              <div className="py-16 px-6 text-center space-y-4">
+                                <div className="w-16 h-16 mx-auto bg-amber-100 rounded-full flex items-center justify-center text-[#3C632A]">
+                                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                                </div>
+                                <h4 className="text-xl font-black text-[#5D3A1A]">Belum Ada Akun Siswa Ditemukan</h4>
+                                <p className="text-sm font-bold text-[#5D3A1A]/70 max-w-md mx-auto">
+                                  Belum ada siswa yang terdaftar di room ini atau hasil pencarian tidak cocok. Silakan tambahkan murid atau import file Excel.
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() => setGuruTab("siswa")}
+                                  className="px-6 py-2.5 bg-[#73B14C] hover:bg-[#3C632A] text-white font-black text-sm rounded-xl border-2 border-[#3C632A] shadow-sm"
+                                >
+                                  + Tambahkan Murid Baru Sekarang
+                                </button>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <table className="w-full text-left border-collapse">
+                              <thead>
+                                <tr className="bg-[#3C632A] text-[#FFFFDB] uppercase text-xs md:text-sm font-black tracking-wider">
+                                  <th className="py-4 px-4 w-12 text-center">No</th>
+                                  <th className="py-4 px-4">Nama Siswa</th>
+                                  <th className="py-4 px-4">Preset Aksesibilitas</th>
+                                  <th className="py-4 px-4">Kode Kelas</th>
+                                  <th className="py-4 px-4">PIN Siswa</th>
+                                  <th className="py-4 px-4 text-center">Aksi</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y-2 divide-slate-100 font-bold text-sm text-[#5D3A1A]">
+                                {filtered.map((student, idx) => (
+                                  <tr key={student.id} className="hover:bg-[#FFDF59]/20 transition-colors">
+                                    <td className="py-4 px-4 text-center font-black text-slate-400">
+                                      {idx + 1}
+                                    </td>
+
+                                    {/* 1. Nama Siswa */}
+                                    <td className="py-4 px-4">
+                                      <div className="font-black text-base text-[#0f172a]">{student.full_name}</div>
+                                      <div className="text-xs text-slate-500 font-semibold mt-0.5">
+                                        {student.jenjang || "Kelas 4 SD"}
+                                      </div>
+                                    </td>
+
+                                    {/* 2. Preset Aksesibilitas */}
+                                    <td className="py-4 px-4">
+                                      <span className="inline-flex items-center px-3 py-1 bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-full text-xs font-extrabold">
+                                        {getA11yPresetLabel(student.accessibility_config)}
+                                      </span>
+                                    </td>
+
+                                    {/* 3. Kode Kelas */}
+                                    <td className="py-4 px-4">
+                                      <span className="font-mono font-black text-sm px-3 py-1 bg-slate-100 text-slate-800 border border-slate-300 rounded-lg">
+                                        {student.current_room_code || teacherRoomCode}
+                                      </span>
+                                    </td>
+
+                                    {/* 4. PIN Siswa */}
+                                    <td className="py-4 px-4">
+                                      <span className="font-mono font-black text-base px-3.5 py-1 bg-amber-100 text-[#C3631D] border-2 border-[#C3631D] rounded-lg tracking-widest shadow-sm">
+                                        {student.pin_code || student.accessibility_config?.pin_code || "----"}
+                                      </span>
+                                    </td>
+
+                                    {/* 5. Aksi: Salin Akses & Reset PIN */}
+                                    <td className="py-4 px-4">
+                                      <div className="flex items-center justify-center gap-2">
+                                        {/* Tombol Salin Akses WhatsApp */}
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const text = formatWhatsAppStudentAccess(student);
+                                            navigator.clipboard?.writeText(text);
+                                            showGuruToast(`Format WhatsApp untuk ${student.full_name} berhasil disalin!`);
+                                          }}
+                                          className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:translate-y-0.5"
+                                          title="Salin format teks siap kirim ke WhatsApp wali murid"
+                                        >
+                                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                                          <span>Salin Akses</span>
+                                        </button>
+
+                                        {/* Tombol Reset PIN */}
+                                        <button
+                                          type="button"
+                                          onClick={async () => {
+                                            if (confirm(`Reset PIN untuk siswa "${student.full_name}"?\nPIN lama tidak dapat digunakan lagi.`)) {
+                                              const newPin = await resetStudentPin(student.id);
+                                              setStudentsList((prev) =>
+                                                prev.map((s) =>
+                                                  s.id === student.id
+                                                    ? {
+                                                        ...s,
+                                                        pin_code: newPin,
+                                                        accessibility_config: {
+                                                          ...(s.accessibility_config || {}),
+                                                          pin_code: newPin,
+                                                        },
+                                                      }
+                                                    : s
+                                                )
+                                              );
+                                              showGuruToast(`PIN ${student.full_name} berhasil di-reset menjadi: ${newPin}`);
+                                            }
+                                          }}
+                                          className="px-3.5 py-2 bg-[#FFBA48] hover:bg-[#FFA500] text-[#5D3A1A] font-extrabold text-xs rounded-xl border-2 border-[#3C632A] shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:translate-y-0.5"
+                                          title="Generate PIN acak baru secara instan jika terjadi kompromi keamanan"
+                                        >
+                                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                          <span>Reset PIN</span>
+                                        </button>
+
+                                        {/* Tombol Hapus Murid */}
+                                        <button
+                                          type="button"
+                                          onClick={async () => {
+                                            if (confirm(`Hapus murid "${student.full_name}" dari daftar?`)) {
+                                              await deleteStudent(student.id);
+                                              setStudentsList((prev) => prev.filter((s) => s.id !== student.id));
+                                              showGuruToast(`Data murid ${student.full_name} berhasil dihapus.`);
+                                            }
+                                          }}
+                                          className="w-[34px] h-[34px] flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl border border-rose-300 transition-all cursor-pointer shrink-0"
+                                          title="Hapus murid"
+                                        >
+                                          <svg className="w-4 h-4 shrink-0 block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
                   {guruTab === "materi" && (
-                    <div className="bg-[#FFDF59] border-4 border-[#3C632A] rounded-[32px] p-8 md:p-12 shadow-[8px_8px_0px_0px_#3C632A] space-y-8 animate-in fade-in duration-200 mt-6">
+                    <div className="bg-[#FFDF59] border-4 border-[#3C632A] rounded-[32px] p-8 md:p-12 shadow-xl space-y-8 animate-in fade-in duration-200 mt-6">
                       <div>
                         <h3 className="text-2xl md:text-3xl font-black text-[#5D3A1A] drop-shadow-sm">Upload Materi Pembelajaran</h3>
                         <p className="text-sm md:text-base text-[#5D3A1A]/90 font-bold mt-2">
@@ -2749,7 +3133,7 @@ export default function DashboardPage() {
                         {matDocFileName && (
                           <div className="p-3.5 bg-emerald-50 border-2 border-emerald-200 rounded-xl text-xs md:text-sm font-black text-emerald-950 flex items-center justify-between">
                             <span>Dokumen Terlampir: {matDocFileName}</span>
-                            <span className="text-emerald-700">✓ Berhasil Dibaca</span>
+                            <span className="text-emerald-700">Berhasil Dibaca</span>
                           </div>
                         )}
                       </div>
@@ -2886,7 +3270,7 @@ export default function DashboardPage() {
                                 </div>
                                 <div className="text-xs font-bold text-slate-700 pt-2 border-t border-slate-200/80 flex items-center justify-between">
                                   <span>{mat.flashcards.length} Study Cards</span>
-                                  <span className="text-emerald-700">✓ Aktif di Room</span>
+                                  <span className="text-emerald-700">Aktif di Room</span>
                                 </div>
                               </div>
                             ))}
@@ -2898,7 +3282,7 @@ export default function DashboardPage() {
 
                   {/* GURU SUB-TAB 2: UPLOAD UJIAN (FILE DOKUMEN / MANUAL PG & ESSAY SUPPORT) */}
                   {guruTab === "ujian" && (
-                    <div className="bg-[#FFDF59] border-4 border-[#3C632A] rounded-[32px] p-8 md:p-12 shadow-[8px_8px_0px_0px_#3C632A] space-y-8 animate-in fade-in duration-200 mt-6">
+                    <div className="bg-[#FFDF59] border-4 border-[#3C632A] rounded-[32px] p-8 md:p-12 shadow-xl space-y-8 animate-in fade-in duration-200 mt-6">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
                         <div>
                           <h3 className="text-2xl md:text-3xl font-black text-[#5D3A1A] drop-shadow-sm">Upload Paket Soal Ujian Resmi</h3>
@@ -2995,7 +3379,7 @@ export default function DashboardPage() {
                             {examDocFileName && (
                               <div className="mt-4 p-4 bg-emerald-50 border-2 border-emerald-200 rounded-xl text-sm font-black text-emerald-950 flex items-center justify-between max-w-xl mx-auto">
                                 <span>Dokumen Terlampir: {examDocFileName}</span>
-                                <span className="text-emerald-700">✓ 4 Soal Diekstrak (2 PG + 2 Essay)</span>
+                                <span className="text-emerald-700">4 Soal Diekstrak (2 PG + 2 Essay)</span>
                               </div>
                             )}
                           </div>
@@ -3179,7 +3563,7 @@ export default function DashboardPage() {
                   {guruTab === "room" && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-200">
                       {/* Form 1: Connect / Create Class Room */}
-                      <div className="bg-[#FFDF59] border-4 border-[#3C632A] rounded-[32px] p-6 md:p-8 shadow-[8px_8px_0px_0px_#3C632A] space-y-5">
+                      <div className="bg-[#FFDF59] border-4 border-[#3C632A] rounded-[32px] p-6 md:p-8 shadow-xl space-y-5">
                         <div>
                           <h3 className="text-2xl font-black text-[#5D3A1A]">Hubungkan / Buat Room Kelas Baru</h3>
                           <p className="text-sm font-bold text-[#5D3A1A]/80 mt-1">
@@ -3267,7 +3651,7 @@ export default function DashboardPage() {
                       </div>
 
                       {/* Form 2: Room Announcement Broadcast */}
-                      <div className="bg-[#FFDF59] border-4 border-[#3C632A] rounded-[32px] p-6 md:p-8 shadow-[8px_8px_0px_0px_#3C632A] space-y-5 flex flex-col justify-between">
+                      <div className="bg-[#FFDF59] border-4 border-[#3C632A] rounded-[32px] p-6 md:p-8 shadow-xl space-y-5 flex flex-col justify-between">
                         <div className="space-y-5">
                           <div>
                             <h3 className="text-2xl font-black text-[#5D3A1A]">Broadcast Pengumuman Room</h3>
@@ -3305,7 +3689,7 @@ export default function DashboardPage() {
                   {/* GURU SUB-TAB 4: MONITORING CONTENT & PENILAIAN ESSAY */}
                   {guruTab === "rekap" && (
                     <div className="space-y-6 animate-in fade-in duration-200">
-                      <div className="bg-[#FFDF59] border-4 border-[#3C632A] rounded-[32px] p-6 md:p-8 shadow-[8px_8px_0px_0px_#3C632A] space-y-6">
+                      <div className="bg-[#FFDF59] border-4 border-[#3C632A] rounded-[32px] p-6 md:p-8 shadow-xl space-y-6">
                         <div>
                           <h3 className="text-2xl font-black text-[#5D3A1A]">Rekap Konten & Hasil Ujian Siswa ({teacherRoomCode})</h3>
                           <p className="text-sm md:text-base font-bold text-[#5D3A1A]/80 mt-1">
@@ -3627,7 +4011,7 @@ export default function DashboardPage() {
                 </div>
                 <button id="btn-flashcard-close" data-scan-label="Tutup Flashcard" onClick={() => setActiveFlashcardMaterial(null)} className="w-10 h-10 rounded-full bg-slate-100 text-slate-700 font-black hover:bg-slate-200 flex items-center justify-center text-lg"
                 >
-                  ✕
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </div>
 

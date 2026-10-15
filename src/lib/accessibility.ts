@@ -49,3 +49,9 @@ export const isFullVoiceEnabled = (session: UserSession | null): boolean => {
   return false;
 };
 
+export { isMotorControlEnabled } from "./motoricAccessibility";
+export { isIntellectualModeEnabled, getIntellectualConfig } from "./intellectualAccessibility";
+export { isMentalModeEnabled, getMentalConfig } from "./mentalAccessibility";
+
+
+

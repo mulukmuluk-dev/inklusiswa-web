@@ -26,7 +26,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             <button
               type="button"
               onClick={onStart}
-              className="group relative inline-block min-h-[50px] overflow-hidden rounded-full border-4 border-[#3C632A] bg-[#FF784E] px-[24px] py-[6px] text-center text-[24px] font-black text-[#FFFFDB] transition-colors duration-300 shadow-[4px_4px_0px_0px_#3C632A] cursor-pointer"
+              className="group relative inline-block min-h-[50px] overflow-hidden rounded-full border-4 border-[#3C632A] bg-[#FF784E] px-[24px] py-[6px] text-center text-[24px] font-black text-[#FFFFDB] transition-all duration-300 shadow-md hover:shadow-lg cursor-pointer"
             >
               <span className="relative z-10">Masuk Aplikasi</span>
               <span className="absolute inset-0 z-0 w-0 rounded-full bg-[#3C632A] transition-all duration-300 group-hover:w-full"></span>
@@ -47,8 +47,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
           
           <div className="relative grid w-full grid-cols-1 gap-10 px-5 py-16 md:grid-cols-2 md:gap-14 md:px-10 md:py-28 xl:px-16 items-stretch">
             {/* Left Card: Vibrant Yellow (Like Header) */}
-            <div className="relative rounded-[28px] bg-[#FFBA48] p-8 md:p-12 z-10 border-4 border-[#3C632A] shadow-[8px_8px_0px_0px_#3C632A] flex flex-col justify-center">
-              <p className="mb-6 w-fit inline-block rounded-full bg-white px-5 py-2 text-[19px] font-black text-[#FF784E] border-4 border-[#3C632A] shadow-[4px_4px_0px_0px_#3C632A]">
+            <div className="relative rounded-[28px] bg-[#FFBA48] p-8 md:p-12 z-10 border-4 border-[#3C632A] shadow-xl flex flex-col justify-center">
+              <p className="mb-6 w-fit inline-block rounded-full bg-white px-5 py-2 text-[19px] font-black text-[#FF784E] border-4 border-[#3C632A] shadow-md">
                 Belajar Seru untuk Anak SD
               </p>
               <h1 className="m-0 text-[clamp(2.8rem,7vw,5rem)] font-black leading-[1.05] text-[#3C632A]">
@@ -60,7 +60,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               <div className="mt-10 flex flex-wrap gap-4">
                 <button
                   onClick={onStart}
-                  className="group relative inline-block min-h-[56px] overflow-hidden rounded-full border-4 border-[#3C632A] bg-white px-[36px] py-[14px] text-center text-[22px] font-black transition-colors duration-300 text-[#3C632A] hover:text-white shadow-[6px_6px_0px_0px_#3C632A]"
+                  className="group relative inline-block min-h-[56px] overflow-hidden rounded-full border-4 border-[#3C632A] bg-white px-[36px] py-[14px] text-center text-[22px] font-black transition-all duration-300 text-[#3C632A] hover:text-white shadow-md hover:shadow-lg"
                 >
                   <span className="relative z-10">Mulai Petualangan</span>
                   <span className="absolute inset-0 z-0 w-0 rounded-full bg-[#73B14C] transition-all duration-300 group-hover:w-full"></span>
@@ -70,14 +70,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             
             {/* Right Column: Illustration Frame */}
             <figure className="relative m-0 flex w-full flex-col justify-center z-10">
-              <div className="aspect-[4/3] w-full rounded-[28px] border-4 border-[#3C632A] bg-[#FFFFDB] flex items-center justify-center shadow-[12px_12px_0px_0px_#3C632A] overflow-hidden relative group">
+              <div className="aspect-[4/3] w-full rounded-[28px] border-4 border-[#3C632A] bg-[#FFFFDB] flex items-center justify-center shadow-xl overflow-hidden relative group">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#FFE296]/60 to-[#FFBA48]/60" />
                 {/* Fun SVG Illustration for kids */}
                 <svg className="w-56 h-56 text-[#FF5685] z-10 group-hover:scale-110 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                 </svg>
               </div>
-              <figcaption className="mt-6 mx-auto md:mr-0 inline-block w-fit rounded-full border-4 border-[#3C632A] bg-[#FFBA48] px-6 py-3 text-[20px] font-black text-[#3C632A] shadow-[6px_6px_0px_0px_#3C632A] rotate-2">
+              <figcaption className="mt-6 mx-auto md:mr-0 inline-block w-fit rounded-full border-4 border-[#3C632A] bg-[#FFBA48] px-6 py-3 text-[20px] font-black text-[#3C632A] shadow-md rotate-2">
                 Kelas interaktif yang ceria
               </figcaption>
             </figure>
@@ -98,8 +98,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             
             <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 md:gap-10 lg:grid-cols-3">
               {/* Feature 1 */}
-              <div className="flex flex-col rounded-[24px] bg-[#FFE296] border-4 border-[#3C632A] p-8 transition-transform duration-200 hover:scale-[1.02] hover:-translate-y-2 shadow-[8px_8px_0px_0px_#3C632A] group">
-                <div className="h-20 w-20 rounded-2xl bg-[#FF5685] border-4 border-[#3C632A] flex items-center justify-center mb-6 group-hover:rotate-6 transition-transform shadow-[4px_4px_0px_0px_#3C632A]">
+              <div className="flex flex-col rounded-[24px] bg-[#FFE296] border-4 border-[#3C632A] p-8 transition-transform duration-200 hover:scale-[1.02] hover:-translate-y-1 shadow-lg group">
+                <div className="h-20 w-20 rounded-2xl bg-[#FF5685] border-4 border-[#3C632A] flex items-center justify-center mb-6 group-hover:rotate-6 transition-transform shadow-md">
                   <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                 </div>
                 <h3 className="m-0 text-[1.6rem] font-black text-[#3C632A]">Kelas Ajaib</h3>
@@ -109,8 +109,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               </div>
 
               {/* Feature 2 */}
-              <div className="flex flex-col rounded-[24px] bg-[#FFE296] border-4 border-[#3C632A] p-8 transition-transform duration-200 hover:scale-[1.02] hover:-translate-y-2 shadow-[8px_8px_0px_0px_#3C632A] group">
-                <div className="h-20 w-20 rounded-2xl bg-[#FFBA48] border-4 border-[#3C632A] flex items-center justify-center mb-6 group-hover:rotate-6 transition-transform shadow-[4px_4px_0px_0px_#3C632A]">
+              <div className="flex flex-col rounded-[24px] bg-[#FFE296] border-4 border-[#3C632A] p-8 transition-transform duration-200 hover:scale-[1.02] hover:-translate-y-1 shadow-lg group">
+                <div className="h-20 w-20 rounded-2xl bg-[#FFBA48] border-4 border-[#3C632A] flex items-center justify-center mb-6 group-hover:rotate-6 transition-transform shadow-md">
                   <svg className="w-10 h-10 text-[#3C632A]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
                 </div>
                 <h3 className="m-0 text-[1.6rem] font-black text-[#3C632A]">Perintah Suara</h3>
@@ -120,8 +120,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               </div>
 
               {/* Feature 3 */}
-              <div className="flex flex-col rounded-[24px] bg-[#FFE296] border-4 border-[#3C632A] p-8 transition-transform duration-200 hover:scale-[1.02] hover:-translate-y-2 shadow-[8px_8px_0px_0px_#3C632A] group">
-                <div className="h-20 w-20 rounded-2xl bg-[#73B14C] border-4 border-[#3C632A] flex items-center justify-center mb-6 group-hover:rotate-6 transition-transform shadow-[4px_4px_0px_0px_#3C632A]">
+              <div className="flex flex-col rounded-[24px] bg-[#FFE296] border-4 border-[#3C632A] p-8 transition-transform duration-200 hover:scale-[1.02] hover:-translate-y-1 shadow-lg group">
+                <div className="h-20 w-20 rounded-2xl bg-[#73B14C] border-4 border-[#3C632A] flex items-center justify-center mb-6 group-hover:rotate-6 transition-transform shadow-md">
                   <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" /></svg>
                 </div>
                 <h3 className="m-0 text-[1.6rem] font-black text-[#3C632A]">Isyarat Tangan</h3>
@@ -136,7 +136,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         {/* AKSES / MULAI SECTION */}
         <section id="akses" className="scroll-mt-24 bg-[#73B14C] py-20 md:py-32">
           <div className="w-full px-5 md:px-10 xl:px-16">
-            <div className="relative overflow-hidden rounded-[32px] bg-[#FFE296] border-4 border-[#3C632A] p-10 md:p-16 shadow-[12px_12px_0px_0px_#3C632A]">
+            <div className="relative overflow-hidden rounded-[32px] bg-[#FFE296] border-4 border-[#3C632A] p-10 md:p-16 shadow-xl">
               <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-10 h-64 w-64 rounded-full bg-white/40"></div>
               <div className="relative z-10 text-center md:text-left flex flex-col md:flex-row md:items-center justify-between gap-10">
                 <div className="max-w-[46ch]">
@@ -150,7 +150,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                 <div className="flex-shrink-0">
                   <button
                     onClick={onStart}
-                    className="group relative inline-block min-h-[64px] cursor-pointer overflow-hidden rounded-full border-4 border-[#3C632A] bg-white px-[42px] py-[16px] text-center text-[24px] font-black text-[#3C632A] transition-colors duration-300 hover:text-white shadow-[6px_6px_0px_0px_#3C632A]"
+                    className="group relative inline-block min-h-[64px] cursor-pointer overflow-hidden rounded-full border-4 border-[#3C632A] bg-white px-[42px] py-[16px] text-center text-[24px] font-black text-[#3C632A] transition-all duration-300 hover:text-white shadow-md hover:shadow-lg"
                   >
                     <span className="relative z-[2]">Ayo Mulai!</span>
                     <span className="absolute inset-0 z-0 w-0 rounded-full bg-[#FF5685] transition-all duration-300 group-hover:w-full"></span>

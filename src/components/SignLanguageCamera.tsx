@@ -263,7 +263,7 @@ export function SignLanguageCamera({ onClose }: SignLanguageCameraProps) {
                 isTrainingMode ? "bg-amber-100 border-amber-300 text-amber-700" : "bg-white border-slate-200 text-slate-500 hover:bg-slate-100"
               }`}
             >
-              ⚙️ {isTrainingMode ? "Tutup Mode Pelatihan" : "Mode Pelatihan AI"}
+              {isTrainingMode ? "Tutup Mode Pelatihan" : "Mode Pelatihan AI"}
             </button>
             {onClose && (
               <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-xl transition-colors text-slate-500">
@@ -317,7 +317,7 @@ export function SignLanguageCamera({ onClose }: SignLanguageCameraProps) {
                 
                 {(!isTrained && !isTrainingMode && cameraReady && !isModelLoading) && (
                   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 bg-amber-500/90 text-white px-4 py-2 rounded-full font-bold text-sm text-center w-max">
-                    ⚠️ Model belum dilatih! Klik "Mode Pelatihan AI".
+                    Model belum dilatih. Klik "Mode Pelatihan AI".
                   </div>
                 )}
               </>
@@ -365,7 +365,7 @@ export function SignLanguageCamera({ onClose }: SignLanguageCameraProps) {
                       <div className="flex flex-col items-center animate-in slide-in-from-bottom-2">
                         <span className="text-slate-900 text-2xl font-black text-center">{detectedText}</span>
                         <span className="text-emerald-500 text-xs font-bold mt-2 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
-                          ✓ Validasi Stabil
+                          Validasi Stabil
                         </span>
                       </div>
                     ) : (
@@ -406,13 +406,13 @@ export function SignLanguageCamera({ onClose }: SignLanguageCameraProps) {
                     onClick={saveDatasetToLocalStorage}
                     className="w-full py-2 bg-emerald-500 text-white font-bold rounded-lg text-sm hover:bg-emerald-600 shadow-sm"
                   >
-                    💾 Simpan Dataset
+                    Simpan Dataset
                   </button>
                   <button 
                     onClick={clearDataset}
                     className="w-full py-2 bg-red-100 text-red-600 font-bold rounded-lg text-sm hover:bg-red-200"
                   >
-                    🗑️ Reset Semua Data
+                    Reset Semua Data
                   </button>
                 </div>
               </div>

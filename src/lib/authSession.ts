@@ -14,6 +14,9 @@ export interface UserSession {
     mainMode?: string | null;
     specificMode?: string | null;
     physicalControlMethod?: string | null;
+    motoricConfig?: any;
+    intellectualConfig?: any;
+    mentalConfig?: any;
   };
 }
 
@@ -31,10 +34,20 @@ export function getActiveSession(): UserSession | null {
     if (parsed && parsed.isLoggedIn) {
       // Pastikan akun Guru tidak membawa konfigurasi disabilitas siswa
       if (parsed.role === "guru") {
-        if (parsed.accessibilityConfig?.specificMode === "tunanetra" || parsed.accessibilityConfig?.mainMode === "sensorik") {
+        if (
+          parsed.accessibilityConfig?.specificMode === "tunanetra" ||
+          parsed.accessibilityConfig?.mainMode === "sensorik" ||
+          parsed.accessibilityConfig?.mainMode?.startsWith("fisik") ||
+          parsed.accessibilityConfig?.mainMode === "intelektual" ||
+          parsed.accessibilityConfig?.mainMode === "mental"
+        ) {
           parsed.accessibilityConfig = { mainMode: "guru_normal", specificMode: null, physicalControlMethod: null };
           localStorage.setItem(SESSION_KEY, JSON.stringify(parsed));
           localStorage.removeItem("pintara_eye_control_enabled");
+          localStorage.removeItem("pintara_motor_control_enabled");
+          localStorage.removeItem("pintara_intellectual_enabled");
+          localStorage.removeItem("pintara_mental_enabled");
+          localStorage.removeItem("pintara_mental_config");
         }
       }
       return parsed;

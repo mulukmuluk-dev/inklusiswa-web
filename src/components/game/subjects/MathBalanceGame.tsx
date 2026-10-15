@@ -84,10 +84,10 @@ export function MathBalanceGame({ levelId, onLevelComplete, accessibilityMode }:
       case 7:
         // LEVEL KOTAK MISTERI (VARIABLE X)
         setLeftCount(9);
-        setRightCount(2); // Kotak misteri 🎁 + 2 = 9 => X = 7
+        setRightCount(2); // Kotak misteri [X] + 2 = 9 => X = 7
         setTargetCount(9);
         promptText = "Level 7 Kotak Misteri: Ada kotak hadiah X di kiri. Sisi kanan bernilai 9. Berapa nilai kotak misteri tersebut?";
-        initialMsg = "Pecahkan nilai Kotak Misteri 🎁 di kiri agar seimbang dengan 9!";
+        initialMsg = "Pecahkan nilai Kotak Misteri [X] di kiri agar seimbang dengan 9!";
         break;
 
       case 8:
@@ -114,7 +114,7 @@ export function MathBalanceGame({ levelId, onLevelComplete, accessibilityMode }:
         setRightCount(5);
         setTargetCount(20);
         promptText = "Level 10 Ujian Bos: Sisi kiri bernilai 20. Sisi kanan baru bernilai 5. Tambahkan 15 lagi untuk memenangkan gelar Master Matematika!";
-        initialMsg = "👑 UJIAN BOS MASTER: Seimbangkan 20 di kanan untuk meraih Mahkota Master!";
+        initialMsg = "UJIAN BOS MASTER: Seimbangkan 20 di kanan untuk meraih Mahkota Master!";
         break;
 
       default:
@@ -147,7 +147,7 @@ export function MathBalanceGame({ levelId, onLevelComplete, accessibilityMode }:
       setHasWon(true);
       playSuccessFanfare();
       const winMsg = `Hore! Timbangan seimbang! Nilainya pas ${targetCount}. Kamu luar biasa!`;
-      setFeedbackMsg("🎉 Hore! Timbangan Berhasil Seimbang Sempurna!");
+      setFeedbackMsg("Hore! Timbangan Berhasil Seimbang Sempurna!");
       speakGlobal(winMsg);
 
       // Trigger pop up modal after 600ms
@@ -163,7 +163,7 @@ export function MathBalanceGame({ levelId, onLevelComplete, accessibilityMode }:
       if (newAttempts >= 2) {
         setShowClue(true);
         playClueChime();
-        setFeedbackMsg("💡 Petunjuk: Tekan tombol 'Reset' lalu pilih angka " + neededValue);
+        setFeedbackMsg("Petunjuk: Tekan tombol 'Reset' lalu pilih angka " + neededValue);
         speakGlobal("Petunjuk visual aktif. Tekan reset lalu pilih angka " + neededValue);
       } else {
         setFeedbackMsg("Belum pas seimbang! Tekan 'Reset' untuk mengulangi.");
@@ -256,16 +256,16 @@ export function MathBalanceGame({ levelId, onLevelComplete, accessibilityMode }:
             LEVEL {levelId} dari 10
           </span>
           <h2 className="text-lg md:text-xl font-black text-[#FFDF59] drop-shadow-md">
-            {levelId === 1 && "🍎 Timbangan Apel Ajaib"}
-            {levelId === 2 && "🧱 Balok Nilai Tempat"}
-            {levelId === 3 && "⚖️ Penjumlahan Seimbang"}
-            {levelId === 4 && "🍏 Penjumlahan Tiga Suku"}
-            {levelId === 5 && "🎯 Evaluasi Seimbang Cepat"}
-            {levelId === 6 && "➖ Pengurangan & Pengosongan Beban"}
-            {levelId === 7 && "🎁 Variabel Kotak Misteri X"}
-            {levelId === 8 && "✖️ Kelipatan & Perkalian Balok"}
-            {levelId === 9 && "⚖️ Timbangan Ganda"}
-            {levelId === 10 && "👑 Ujian Bos Master Matematika"}
+            {levelId === 1 && "Timbangan Apel Ajaib"}
+            {levelId === 2 && "Balok Nilai Tempat"}
+            {levelId === 3 && "Penjumlahan Seimbang"}
+            {levelId === 4 && "Penjumlahan Tiga Suku"}
+            {levelId === 5 && "Evaluasi Seimbang Cepat"}
+            {levelId === 6 && "Pengurangan & Pengosongan Beban"}
+            {levelId === 7 && "Variabel Kotak Misteri X"}
+            {levelId === 8 && "Kelipatan & Perkalian Balok"}
+            {levelId === 9 && "Timbangan Ganda"}
+            {levelId === 10 && "Ujian Bos Master Matematika"}
           </h2>
         </div>
       </div>
@@ -295,10 +295,10 @@ export function MathBalanceGame({ levelId, onLevelComplete, accessibilityMode }:
             </div>
             {/* Pan Dish & Items */}
             <div className="w-full bg-[#FFDF59] border-4 border-[#C3631D] rounded-b-3xl p-3 shadow-2xl flex flex-wrap items-center justify-center gap-1.5 min-h-[70px]">
-              {levelId === 7 && <span className="text-3xl">🎁</span>}
+              {levelId === 7 && <span className="text-xl font-black px-2 py-1 bg-amber-200 border-2 border-[#3C632A] rounded-lg">X</span>}
               {Array.from({ length: leftCount - (levelId === 7 ? 2 : 0) }).map((_, i) => (
                 <span key={i} className="text-xl md:text-2xl animate-bounce" style={{ animationDelay: `${i * 0.08}s` }}>
-                  {levelId === 2 || levelId === 8 ? "🧱" : "🍎"}
+                  {levelId === 2 || levelId === 8 ? "B" : "A"}
                 </span>
               ))}
             </div>
@@ -320,7 +320,7 @@ export function MathBalanceGame({ levelId, onLevelComplete, accessibilityMode }:
             }`}>
               {Array.from({ length: rightCount }).map((_, i) => (
                 <span key={i} className="text-xl md:text-2xl animate-bounce" style={{ animationDelay: `${i * 0.08}s` }}>
-                  {levelId === 2 || levelId === 8 ? "🧱" : "🍎"}
+                  {levelId === 2 || levelId === 8 ? "B" : "A"}
                 </span>
               ))}
             </div>
@@ -360,7 +360,7 @@ export function MathBalanceGame({ levelId, onLevelComplete, accessibilityMode }:
                 }`}
               >
                 <span>{isSubtractionLevel ? `-${num}` : `+${num}`}</span>
-                <span className="text-lg">{levelId === 2 || levelId === 8 ? "🧱" : "🍎"}</span>
+                <span className="text-lg">{levelId === 2 || levelId === 8 ? "B" : "A"}</span>
               </button>
             );
           })}

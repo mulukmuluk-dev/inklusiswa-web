@@ -81,7 +81,7 @@ export function VoiceControlOverlay() {
               onClick={() => setShowPanel(false)}
               className="text-slate-400 hover:text-white"
             >
-              ✕
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           </div>
 
@@ -105,7 +105,7 @@ export function VoiceControlOverlay() {
                 <span className="text-emerald-400 block text-[10px] uppercase font-bold">
                   Aksi Berhasil Dijalankan:
                 </span>
-                <p className="text-emerald-200 font-semibold mt-0.5">✓ {lastExecuted}</p>
+                <p className="text-emerald-200 font-semibold mt-0.5">{lastExecuted}</p>
               </div>
             )}
 

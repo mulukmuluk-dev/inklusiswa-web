@@ -257,7 +257,7 @@ export function EyeControlOverlay() {
       setGazePos({ x: snapX, y: snapY });
 
       // Tampilkan notifikasi gestur interaktif
-      setGestureFeedback(`⚡ Merem 2 Detik: Berpindah ke ${destinationName}!`);
+      setGestureFeedback(`Merem 2 Detik: Berpindah ke ${destinationName}!`);
       setTimeout(() => {
         setGestureFeedback(null);
       }, 2500);
@@ -890,7 +890,7 @@ export function EyeControlOverlay() {
             }
             playEarcon("wake");
           }}
-          className="px-5 py-3 bg-[#3C632A] hover:bg-[#2F4F20] text-[#FFFFDB] border-3 border-[#FFBA48] rounded-full shadow-[4px_4px_0px_0px_#FFBA48] font-black text-xs md:text-sm flex items-center gap-2.5 transition-all cursor-pointer hover:scale-105 active:scale-95"
+          className="px-5 py-3 bg-[#3C632A] hover:bg-[#2F4F20] text-[#FFFFDB] border-3 border-[#FFBA48] rounded-full shadow-md font-black text-xs md:text-sm flex items-center gap-2.5 transition-all cursor-pointer hover:scale-105 active:scale-95"
           title="Aktifkan Kembali Kontrol Mata"
         >
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -910,7 +910,7 @@ export function EyeControlOverlay() {
       {gestureFeedback && (
         <div className="pointer-events-none fixed top-8 left-1/2 transform -translate-x-1/2 z-[10000] animate-in fade-in slide-in-from-top duration-300">
           <div className="bg-[#3C632A] text-[#FFFFDB] border-4 border-[#FFDF59] shadow-[0_10px_35px_rgba(0,0,0,0.4)] px-7 py-3.5 rounded-full flex items-center space-x-3 text-sm md:text-base font-black">
-            <span className="text-2xl animate-bounce">⚡</span>
+            <svg className="w-6 h-6 text-amber-400 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"/></svg>
             <span>{gestureFeedback}</span>
           </div>
         </div>
@@ -1024,7 +1024,7 @@ export function EyeControlOverlay() {
         </button>
 
         {/* CONTAINER UTAMA (Slide In/Out dengan CSS Transform tanpa unmount video) */}
-        <div className="w-72 bg-[#F0FDFA] border-4 border-[#3C632A] rounded-2xl shadow-[8px_8px_0px_0px_#3C632A] p-4 flex flex-col gap-3 font-sans shrink-0 mr-4">
+        <div className="w-72 bg-[#F0FDFA] border-4 border-[#3C632A] rounded-2xl shadow-xl p-4 flex flex-col gap-3 font-sans shrink-0 mr-4">
           {/* Header Status & Tombol Matikan */}
           <div className="flex items-center justify-between border-b-2 border-[#3C632A]/20 pb-2">
             <span className="font-black text-xs text-[#3C632A] flex items-center gap-1.5">

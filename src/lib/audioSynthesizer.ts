@@ -99,3 +99,29 @@ export function playClueChime() {
     console.warn("Audio synthesizer error:", e);
   }
 }
+
+// Nada Harmonik Lembut untuk Panduan Tarik Napas (Calm Tone 432Hz)
+export function playCalmTone(freq: number = 432) {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.08, ctx.currentTime + 0.15);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.2);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 1.25);
+  } catch (e) {
+    console.warn("Audio synthesizer error:", e);
+  }
+}

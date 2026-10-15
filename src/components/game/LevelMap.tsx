@@ -336,11 +336,11 @@ export function LevelMap({ subjectName, progress, onSelectLevel, grade = 1 }: Le
   const levels = isSeni ? seniLevels : isPancasila ? pancasilaLevels : isIpas ? ipasLevels : isEnglish ? englishLevels : isIndo ? indoLevels : mathLevels;
 
   return (
-    <div className="w-full flex flex-col items-center justify-center p-2 md:p-6 relative">
+    <div className="w-full flex flex-col items-center justify-start p-2 md:p-6 relative">
       
       {/* Map Header Title Banner */}
       <div className="text-center mb-8 max-w-2xl">
-        <span className="px-5 py-2 bg-[#C3631D] text-[#FFDF59] font-black text-sm md:text-base rounded-2xl tracking-wider uppercase shadow-[4px_4px_0px_0px_#3C632A] border-4 border-[#3C632A] inline-block mb-3">
+        <span className="px-5 py-2 bg-[#C3631D] text-[#FFDF59] font-black text-sm md:text-base rounded-2xl tracking-wider uppercase shadow-md border-4 border-[#3C632A] inline-block mb-3">
           PETA PETUALANGAN BELAJAR ({levels.length} LEVEL)
         </span>
         <h2 className="text-3xl md:text-5xl font-black text-[#3C632A] drop-shadow-sm">
@@ -369,7 +369,7 @@ export function LevelMap({ subjectName, progress, onSelectLevel, grade = 1 }: Le
               data-gaze-primary={isCurrent ? "true" : undefined}
               data-gaze-current={isCurrent ? "true" : undefined}
               id={`level-button-${lvl.id}`}
-              className={`p-6 rounded-[32px] border-4 border-[#3C632A] flex flex-col items-center justify-between text-center transition-all duration-300 relative shadow-[8px_8px_0px_0px_#3C632A] group min-h-[220px] ${
+              className={`p-6 rounded-[32px] border-4 border-[#3C632A] flex flex-col items-center justify-between text-center transition-all duration-300 relative shadow-xl group min-h-[220px] ${
                 isCompleted
                   ? "bg-[#7FD13B] text-white hover:scale-105 cursor-pointer"
                   : isCurrent

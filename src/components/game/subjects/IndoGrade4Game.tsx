@@ -159,7 +159,7 @@ export function IndoGrade4Game({ levelId, onLevelComplete, accessibilityMode }: 
   };
 
   return (
-    <div className="w-full flex flex-col items-center justify-between min-h-[560px] p-4 md:p-8 bg-[#FFE296] rounded-[32px] border-4 border-[#3C632A] text-[#3C632A] shadow-[8px_8px_0px_0px_#3C632A] relative overflow-hidden">
+    <div className="w-full flex flex-col items-center justify-between min-h-[560px] p-4 md:p-8 bg-[#FFE296] rounded-[32px] border-4 border-[#3C632A] text-[#3C632A] shadow-xl relative overflow-hidden">
       
       {/* Header Info Level */}
       <div className="w-full flex items-center justify-between mb-4">
@@ -191,7 +191,7 @@ export function IndoGrade4Game({ levelId, onLevelComplete, accessibilityMode }: 
 
       {/* ================= FASE 1: PENGENALAN KONSEP MATERI ================= */}
       {phase === "materi" ? (
-        <div className="w-full max-w-2xl flex-1 flex flex-col items-center justify-between p-6 bg-white/80 border-4 border-[#3C632A] rounded-[28px] shadow-[6px_6px_0px_0px_#3C632A] my-2 text-center animate-in fade-in duration-300">
+        <div className="w-full max-w-2xl flex-1 flex flex-col items-center justify-between p-6 bg-white/80 border-4 border-[#3C632A] rounded-[28px] shadow-lg my-2 text-center animate-in fade-in duration-300">
           <div className="space-y-4">
             <span className="px-4 py-1.5 bg-[#C3631D] text-[#FFDF59] font-black text-sm rounded-xl border-2 border-[#3C632A] uppercase tracking-wider">
               FASE 1: PENGENALAN KONSEP MATERI
@@ -332,15 +332,15 @@ export function IndoGrade4Game({ levelId, onLevelComplete, accessibilityMode }: 
           <button
             type="button"
             onClick={handleStartGameChallenge}
-            className="w-full py-5 bg-[#7FD13B] hover:bg-[#6EB832] active:scale-95 text-white border-4 border-[#3C632A] font-black text-2xl sm:text-3xl rounded-[28px] shadow-[4px_4px_0px_0px_#3C632A] transition-all cursor-pointer relative z-20 mt-4"
+            className="w-full py-5 bg-[#7FD13B] hover:bg-[#6EB832] active:scale-95 text-white border-4 border-[#3C632A] font-black text-2xl sm:text-3xl rounded-[28px] shadow-md transition-all cursor-pointer relative z-20 mt-4"
           >
             Aku Sudah Paham, Mulai Game
           </button>
         </div>
       ) : isCompleted ? (
         /* ================= HASIL SELESAI 10 SOAL ================= */
-        <div className="w-full max-w-2xl flex-1 flex flex-col items-center justify-center p-8 bg-white/90 border-4 border-[#3C632A] rounded-[28px] shadow-[6px_6px_0px_0px_#3C632A] my-4 text-center animate-in zoom-in-95 duration-300">
-          <span className="text-6xl mb-2">🏆</span>
+        <div className="w-full max-w-2xl flex-1 flex flex-col items-center justify-center p-8 bg-white/90 border-4 border-[#3C632A] rounded-[28px] shadow-lg my-4 text-center animate-in zoom-in-95 duration-300">
+          <div className="w-16 h-16 rounded-2xl bg-amber-400 text-[#3C632A] flex items-center justify-center mb-2 shadow-md"><svg className="w-10 h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94A5.01 5.01 0 0011 15.9V19H7v2h10v-2h-4v-3.1c1.98-.44 3.51-2.02 3.91-4.06C19.28 11.45 21 9.42 21 7V5h-2zm-14 3V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/></svg></div>
           <h3 className="text-3xl font-black text-[#3C632A] mb-2">
             Misi Selesai!
           </h3>
@@ -361,7 +361,7 @@ export function IndoGrade4Game({ levelId, onLevelComplete, accessibilityMode }: 
           <button
             type="button"
             onClick={handleFinishLevel}
-            className="px-8 py-4 bg-[#7FD13B] hover:bg-[#6EB832] text-white font-black text-xl rounded-2xl border-4 border-[#3C632A] shadow-[4px_4px_0px_0px_#3C632A] hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            className="px-8 py-4 bg-[#7FD13B] hover:bg-[#6EB832] text-white font-black text-xl rounded-2xl border-4 border-[#3C632A] shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
           >
             Lanjut & Simpan Bintang
           </button>
@@ -371,7 +371,7 @@ export function IndoGrade4Game({ levelId, onLevelComplete, accessibilityMode }: 
         <div className="w-full max-w-2xl flex-1 flex flex-col items-center justify-between my-2">
           
           {/* PROGRESS BAR 10 SOAL */}
-          <div className="w-full bg-white/90 border-4 border-[#3C632A] rounded-2xl p-3 shadow-[4px_4px_0px_0px_#3C632A] mb-4 flex flex-col gap-2">
+          <div className="w-full bg-white/90 border-4 border-[#3C632A] rounded-2xl p-3 shadow-md mb-4 flex flex-col gap-2">
             <div className="flex justify-between items-center text-xs md:text-sm font-black text-[#3C632A]">
               <span>Tantangan Game: Soal {currentQuestionIndex + 1} dari {levelData.questions.length}</span>
               <span className="bg-[#FFDF59] px-3 py-1 rounded-xl border border-[#3C632A]">
@@ -387,7 +387,7 @@ export function IndoGrade4Game({ levelId, onLevelComplete, accessibilityMode }: 
           </div>
 
           {/* PERTANYAAN SOAL */}
-          <div className="w-full bg-[#C3631D] text-[#FFDF59] border-4 border-[#3C632A] p-6 rounded-3xl text-center shadow-[6px_6px_0px_0px_#3C632A] mb-6">
+          <div className="w-full bg-[#C3631D] text-[#FFDF59] border-4 border-[#3C632A] p-6 rounded-3xl text-center shadow-lg mb-6">
             <p className="text-2xl md:text-3xl font-black leading-snug">
               {currentQ.question}
             </p>
@@ -418,8 +418,10 @@ export function IndoGrade4Game({ levelId, onLevelComplete, accessibilityMode }: 
                   key={idx}
                   type="button"
                   onClick={() => handleSelectAnswer(idx)}
+                  data-quiz-option={optText}
+                  data-quiz-correct={isCorrectOpt ? "true" : "false"}
                   disabled={isAnswerChecked}
-                  className={`p-5 rounded-2xl border-4 border-[#3C632A] font-black text-xl md:text-2xl transition-all shadow-[4px_4px_0px_0px_#3C632A] hover:scale-105 active:scale-95 cursor-pointer text-center ${btnClass}`}
+                  className={`p-5 rounded-2xl border-4 border-[#3C632A] font-black text-xl md:text-2xl transition-all shadow-md hover:scale-105 active:scale-95 cursor-pointer text-center ${btnClass}`}
                 >
                   {optText}
                 </button>

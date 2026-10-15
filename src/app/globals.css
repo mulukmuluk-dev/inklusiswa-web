@@ -6,6 +6,18 @@
   --foreground: #0f172a;
 }
 
+html {
+  zoom: 0.8;
+  min-height: 125vh;
+  width: 100%;
+}
+
+@supports not (zoom: 0.8) {
+  html {
+    font-size: 80%;
+  }
+}
+
 @theme {
   --font-sans: var(--font-baloo), "Baloo 2", ui-sans-serif, system-ui, sans-serif;
 }
@@ -21,6 +33,19 @@ body {
   margin: 0;
   padding: 0;
   overflow-x: hidden;
+  min-height: 125vh;
+  width: 100%;
+}
+
+/* Kompensasi Zoom 0.8 agar min-h-screen dan h-screen memenuhi 100% tinggi monitor tanpa celah putih */
+.min-h-screen,
+[class*="min-h-screen"] {
+  min-height: 125vh !important;
+}
+
+.h-screen,
+[class*="h-screen"] {
+  height: 125vh !important;
 }
 
 @keyframes dotPulse {
@@ -103,3 +128,154 @@ button {
   min-width: 44px;
 }
 
+/* Aksesibilitas Motorik Halus Adaptif (WCAG AAA Target Size & Palm Filter) */
+.a11y-motoric-active button,
+.a11y-motoric-active a,
+.a11y-motoric-active [role="button"],
+.a11y-motoric-active [data-quiz-option] {
+  min-height: 56px !important;
+  min-width: 56px !important;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.a11y-motoric-active {
+  touch-action: pan-y;
+  -webkit-touch-callout: none;
+}
+
+/* Aksesibilitas Intelektual Adaptif (Teks Jelas, Bebas Distraksi & Spasi Ramah Kognitif) */
+.a11y-intellectual-active h1,
+.a11y-intellectual-active h2,
+.a11y-intellectual-active h3,
+.a11y-intellectual-active h4,
+.a11y-intellectual-active p {
+  line-height: 1.7 !important;
+  letter-spacing: 0.02em !important;
+}
+
+.a11y-intellectual-active [data-quiz-option],
+.a11y-intellectual-active [id^='exam-opt-'],
+.a11y-intellectual-active [id^='latihan-opt-'] {
+  transition: transform 0.15s ease, background-color 0.15s ease !important;
+  font-size: 1.15rem !important;
+}
+
+/* Aksesibilitas Mental / Ramah Sensori (ADHD & Autisme) */
+.a11y-mental-active * {
+  /* Hentikan getaran dan animasi agresif */
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.2s !important;
+}
+
+.a11y-mental-active .animate-shake,
+.a11y-mental-active .animate-bounce,
+.a11y-mental-active .animate-ping,
+.a11y-mental-active .animate-spin {
+  animation: none !important;
+}
+
+/* Redam kontras yang terlalu menusuk mata & berikan nada tenang */
+.a11y-mental-active {
+  --background: #f4f7f4;
+}
+
+.a11y-mental-active body {
+  background-color: #f2f6f2 !important;
+}
+
+/* Kartu soal dengan kontras lembut, tidak menyilaukan */
+.a11y-mental-active [class*='bg-[#C3631D]'] {
+  filter: saturate(0.85) brightness(0.95);
+}
+
+/* =========================================================
+   CUSTOM SCROLLBAR (Harmonious Warm Orange / Amber Theme)
+   Menyatu dengan warna oren #FFBA48 dan aksen karamel #C3631D
+   ========================================================= */
+
+/* Firefox & Standard CSS */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #C3631D rgba(195, 99, 29, 0.15);
+}
+
+/* WebKit & Chromium (Chrome, Edge, Safari, Opera) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(195, 99, 29, 0.12);
+  border-radius: 9999px;
+  margin: 0;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #C3631D;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #9A4610;
+}
+
+::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Khusus class .custom-scrollbar */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #C3631D rgba(195, 99, 29, 0.15);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(195, 99, 29, 0.12);
+  border-radius: 9999px;
+  margin: 0;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #C3631D;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #9A4610;
+}
+
+.custom-scrollbar::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Scrollbar utilities */
+.scrollbar-none::-webkit-scrollbar,
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-none,
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

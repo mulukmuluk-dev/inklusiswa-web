@@ -16,6 +16,9 @@ export const metadata: Metadata = {
 import { VoiceControlOverlay } from "@/components/VoiceControlOverlay";
 import { SignControlOverlay } from "@/components/SignControlOverlay";
 import { EyeControlOverlay } from "@/components/EyeControlOverlay";
+import { MotorControlOverlay } from "@/components/MotorControlOverlay";
+import { CognitiveAssistOverlay } from "@/components/CognitiveAssistOverlay";
+import { MentalControlOverlay } from "@/components/MentalControlOverlay";
 
 export default function RootLayout({
   children,
@@ -29,6 +32,9 @@ export default function RootLayout({
         <VoiceControlOverlay />
         <SignControlOverlay />
         <EyeControlOverlay />
+        <MotorControlOverlay />
+        <CognitiveAssistOverlay />
+        <MentalControlOverlay />
       </body>
     </html>
   );

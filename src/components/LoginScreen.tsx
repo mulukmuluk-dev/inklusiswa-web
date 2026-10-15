@@ -18,32 +18,138 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack
   const [pinCode, setPinCode] = useState("");
   const [studentProfile, setStudentProfile] = useState<any>(null);
   const [errorMsg, setErrorMsg] = useState("");
-  const [lockoutTime, setLockoutTime] = useState(0);
-  const failedAttempts = useRef(0);
+  const [lockoutTime, setLockoutTime] = useState<number>(0);
+  const failedAttempts = useRef<number>(0);
 
-  // Auto decrement lockout timer
+  // Rate Limiting Protection (Max 5x salah, Kunci 2 Menit = 120s)
+  const MAX_FAILED_ATTEMPTS = 5;
+  const LOCKOUT_DURATION_SECONDS = 120; // 2 menit
+
+  // Inisialisasi status lockout dari localStorage saat komponen mount
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const storedLockout = localStorage.getItem("pintara_login_lockout_until");
+      if (storedLockout) {
+        const lockoutUntil = parseInt(storedLockout, 10);
+        const now = Date.now();
+        if (lockoutUntil > now) {
+          const remainingSecs = Math.ceil((lockoutUntil - now) / 1000);
+          setLockoutTime(remainingSecs);
+          setErrorMsg("Akses terkunci selama 2 menit karena 5 kali salah memasukkan Kode/PIN.");
+        } else {
+          localStorage.removeItem("pintara_login_lockout_until");
+          localStorage.setItem("pintara_login_failed_attempts", "0");
+        }
+      }
+      const attempts = parseInt(localStorage.getItem("pintara_login_failed_attempts") || "0", 10);
+      failedAttempts.current = attempts;
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  // Hitung mundur timer lockout otomatis per detik
   useEffect(() => {
     let timer: any;
     if (lockoutTime > 0) {
       timer = setInterval(() => {
-        setLockoutTime((prev) => prev - 1);
+        setLockoutTime((prev) => {
+          if (prev <= 1) {
+            localStorage.removeItem("pintara_login_lockout_until");
+            localStorage.setItem("pintara_login_failed_attempts", "0");
+            failedAttempts.current = 0;
+            setErrorMsg("");
+            return 0;
+          }
+          return prev - 1;
+        });
       }, 1000);
     }
     return () => clearInterval(timer);
   }, [lockoutTime]);
 
-  // Audio Companion dihapus sesuai instruksi
+  const recordFailedAttempt = (customMessage?: string) => {
+    failedAttempts.current += 1;
+    localStorage.setItem("pintara_login_failed_attempts", failedAttempts.current.toString());
+
+    if (failedAttempts.current >= MAX_FAILED_ATTEMPTS) {
+      const lockoutUntil = Date.now() + LOCKOUT_DURATION_SECONDS * 1000;
+      localStorage.setItem("pintara_login_lockout_until", lockoutUntil.toString());
+      setLockoutTime(LOCKOUT_DURATION_SECONDS);
+      setErrorMsg("Akun dikunci sementara selama 2 menit (5x salah). Minta bantuan Gurumu atau tunggu hingga selesai.");
+      setPinCode("");
+      failedAttempts.current = 0;
+    } else {
+      const remaining = MAX_FAILED_ATTEMPTS - failedAttempts.current;
+      setErrorMsg(customMessage || `PIN salah! Sisa percobaan: ${remaining} kali.`);
+      setPinCode("");
+    }
+  };
+
+  // Format detik menjadi mm:ss
+  const formatLockoutTimer = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
 
   // --- SISWA LOGIN LOGIC ---
   const handleRoomCodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (lockoutTime > 0) return;
     setErrorMsg("");
-    if (!roomCode.trim()) return;
+    const cleanCode = roomCode.trim().toUpperCase();
+    if (!cleanCode) return;
 
-    // We don't check room validity right now, just proceed to PIN.
-    // Real check happens after PIN.
-    setSiswaStep(2);
-    setPinCode("");
+    // Periksa apakah ada room/siswa dengan kode ini
+    try {
+      // Cek dari cache lokal terlebih dahulu
+      const localStore = typeof window !== "undefined" ? localStorage.getItem("pintara_student_profiles") : null;
+      let hasLocalStudent = false;
+      if (localStore) {
+        try {
+          const list = JSON.parse(localStore);
+          hasLocalStudent = Array.isArray(list) && list.some((s: any) => s.current_room_code?.toUpperCase() === cleanCode);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      // Cek juga dari kelas database
+      const kelasDbStore = typeof window !== "undefined" ? localStorage.getItem("pintara_kelas_db") : null;
+      let hasClassRoom = cleanCode === "INKLU-1234";
+      if (kelasDbStore) {
+        try {
+          const parsed = JSON.parse(kelasDbStore);
+          if (parsed[cleanCode]) hasClassRoom = true;
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      // Jika belum ditemukan di lokal, cek Supabase
+      if (!hasLocalStudent && !hasClassRoom) {
+        const { count, error } = await supabase
+          .from("profiles")
+          .select("*", { count: "exact", head: true })
+          .eq("role", "siswa")
+          .eq("current_room_code", cleanCode);
+
+        if (error || (count !== null && count === 0)) {
+          recordFailedAttempt("Kode Kelas tidak ditemukan. Pastikan kode kelas yang dimasukkan sudah benar!");
+          return;
+        }
+      }
+
+      setSiswaStep(2);
+      setPinCode("");
+    } catch (err) {
+      console.error(err);
+      // Fallback: biarkan lanjut ke verifikasi PIN
+      setSiswaStep(2);
+      setPinCode("");
+    }
   };
 
   const handlePinInput = (num: string) => {
@@ -60,46 +166,68 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack
   };
 
   const handleDeletePin = () => {
+    if (lockoutTime > 0) return;
     if (pinCode.length > 0) {
       setPinCode(pinCode.slice(0, -1));
     }
   };
 
   const verifySiswa = async (pin: string) => {
+    if (lockoutTime > 0) return;
+
     try {
-      // Find student in this room with this PIN (stored in accessibility_config)
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("role", "siswa")
-        .eq("current_room_code", roomCode.toUpperCase())
-        .limit(100);
+      const cleanRoom = roomCode.toUpperCase().trim();
 
-      if (error) throw error;
+      // 1. Cek dari Supabase
+      let student = null;
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("role", "siswa")
+          .eq("current_room_code", cleanRoom)
+          .limit(100);
 
-      // Find the specific student matching the PIN
-      const student = data.find((p) => p.accessibility_config?.pin_code === pin);
+        if (!error && Array.isArray(data)) {
+          student = data.find((p) => p.accessibility_config?.pin_code === pin);
+        }
+      } catch (e) {
+        console.warn("Supabase check failed, trying local store:", e);
+      }
+
+      // 2. Jika belum ketemu, cek local store cadangan
+      if (!student && typeof window !== "undefined") {
+        const rawLocal = localStorage.getItem("pintara_student_profiles");
+        if (rawLocal) {
+          try {
+            const list = JSON.parse(rawLocal);
+            if (Array.isArray(list)) {
+              student = list.find(
+                (s: any) =>
+                  s.current_room_code?.toUpperCase() === cleanRoom &&
+                  (s.pin_code === pin || s.accessibility_config?.pin_code === pin)
+              );
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      }
 
       if (student) {
-        setStudentProfile(student);
+        // Login berhasil! Reset percobaan gagal & lockout
+        localStorage.removeItem("pintara_login_failed_attempts");
+        localStorage.removeItem("pintara_login_lockout_until");
         failedAttempts.current = 0;
+        setStudentProfile(student);
         setSiswaStep(3);
       } else {
-        // Failed attempt
-        failedAttempts.current += 1;
-        if (failedAttempts.current >= 3) {
-          setLockoutTime(30);
-          setErrorMsg("Ups! Kamu salah mengetik 3 kali. Minta bantuan Gurumu atau tunggu 30 detik ya!");
-          setPinCode("");
-          failedAttempts.current = 0; // reset after locking
-        } else {
-          setErrorMsg("PIN salah, coba lagi ya!");
-          setPinCode("");
-        }
+        // Gagal login! Rekam percobaan salah
+        recordFailedAttempt();
       }
     } catch (err) {
       console.error(err);
-      setErrorMsg("Terjadi kesalahan sistem.");
+      setErrorMsg("Terjadi kesalahan sistem saat verifikasi.");
     }
   };
 
@@ -124,14 +252,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack
 
   return (
     <div 
-      className="min-h-screen bg-[#0D9488] bg-cover bg-center bg-no-repeat relative flex flex-col items-center justify-center p-4 md:p-6 font-sans"
+      className="min-h-screen min-h-[125vh] w-full bg-[#0D9488] bg-cover bg-center bg-no-repeat relative flex flex-col items-center justify-center p-4 md:p-6 font-sans"
       style={{ backgroundImage: "url('/images/blackboard_bg.png')" }}
     >
       {/* Overlay */}
       <div className="absolute inset-0 bg-black/20 pointer-events-none"></div>
 
       {/* Main Login Box */}
-      <div className="relative z-10 bg-[#F0FDFA] rounded-[32px] shadow-[12px_12px_0px_0px_#0F172A] border-4 border-[#3C632A] p-8 md:p-12 w-full max-w-4xl flex flex-col items-center">
+      <div className={`relative z-10 bg-[#F0FDFA] rounded-[32px] shadow-2xl border-4 border-[#3C632A] p-8 md:p-12 w-full transition-all duration-300 flex flex-col items-center ${
+        role === "none" ? "max-w-4xl" : "max-w-xl"
+      }`}>
         
         {/* Header inside box */}
         <div className="w-full flex justify-between items-center mb-10">
@@ -148,14 +278,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack
                 onBack();
               }
             }}
-            className="w-12 h-12 bg-white rounded-full border-4 border-[#3C632A] flex items-center justify-center hover:bg-[#FFE296] transition-colors shadow-[4px_4px_0px_0px_#3C632A] focus:outline focus:outline-4 focus:outline-[#0066CC]"
+            className="w-12 h-12 bg-white rounded-full border-4 border-[#3C632A] flex items-center justify-center hover:bg-[#FFE296] transition-colors shadow-md focus:outline focus:outline-4 focus:outline-[#0066CC]"
             aria-label="Kembali"
           >
             <svg className="w-6 h-6 text-[#3C632A]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M15 19l-7-7 7-7" /></svg>
           </button>
           
           <div className="flex-1 flex justify-center">
-             <div className="bg-[#FFBA48] border-4 border-[#3C632A] rounded-full px-6 py-2 shadow-[4px_4px_0px_0px_#3C632A]">
+             <div className="bg-[#FFBA48] border-4 border-[#3C632A] rounded-full px-6 py-2 shadow-md">
                <PintaraLogo size="sm" />
              </div>
           </div>
@@ -170,7 +300,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack
             {/* Card Siswa */}
             <button 
               onClick={() => setRole("siswa")}
-              className="flex-1 bg-[#F59E0B] border-4 border-[#3C632A] rounded-[32px] p-8 md:p-12 shadow-[8px_8px_0px_0px_#3C632A] hover:-translate-y-2 hover:shadow-[12px_12px_0px_0px_#3C632A] transition-all flex flex-col items-center gap-6 group focus:outline focus:outline-4 focus:outline-white focus:outline-offset-8"
+              className="flex-1 bg-[#F59E0B] border-4 border-[#3C632A] rounded-[32px] p-8 md:p-12 shadow-lg hover:-translate-y-1 hover:shadow-xl transition-all flex flex-col items-center gap-6 group focus:outline focus:outline-4 focus:outline-white focus:outline-offset-8"
             >
               <div className="w-32 h-32 bg-white rounded-full border-4 border-[#3C632A] flex items-center justify-center group-hover:scale-110 transition-transform">
                 <svg className="w-16 h-16 text-[#FF5685]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -181,7 +311,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack
             {/* Card Guru */}
             <button 
               onClick={() => setRole("guru")}
-              className="flex-1 bg-white border-4 border-[#3C632A] rounded-[32px] p-8 md:p-12 shadow-[8px_8px_0px_0px_#3C632A] hover:-translate-y-2 hover:shadow-[12px_12px_0px_0px_#3C632A] transition-all flex flex-col items-center gap-6 group focus:outline focus:outline-4 focus:outline-white focus:outline-offset-8"
+              className="flex-1 bg-white border-4 border-[#3C632A] rounded-[32px] p-8 md:p-12 shadow-lg hover:-translate-y-1 hover:shadow-xl transition-all flex flex-col items-center gap-6 group focus:outline focus:outline-4 focus:outline-white focus:outline-offset-8"
             >
               <div className="w-32 h-32 bg-[#0D9488] rounded-full border-4 border-[#3C632A] flex items-center justify-center group-hover:scale-110 transition-transform">
                 <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
@@ -199,7 +329,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack
             
             <button
               onClick={handleGoogleLogin}
-              className="w-full py-4 bg-white border-4 border-[#3C632A] hover:bg-[#FFE296] text-[#3C632A] font-black rounded-full shadow-[6px_6px_0px_0px_#3C632A] transition-all text-xl flex items-center justify-center gap-4 focus:outline focus:outline-4 focus:outline-[#0066CC]"
+              className="w-full py-4 bg-white border-4 border-[#3C632A] hover:bg-[#FFE296] text-[#3C632A] font-black rounded-full shadow-md hover:shadow-lg transition-all text-xl flex items-center justify-center gap-4 focus:outline focus:outline-4 focus:outline-[#0066CC]"
             >
               <svg className="w-8 h-8" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -218,18 +348,37 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack
             {siswaStep === 1 && (
               <form onSubmit={handleRoomCodeSubmit} className="w-full max-w-md flex flex-col items-center animate-in slide-in-from-right-8">
                 <h2 className="text-3xl font-black text-[#3C632A] mb-8 text-center">Kode Kelas Kamu</h2>
+
+                {errorMsg && (
+                  <div className="w-full bg-[#FF5685] border-4 border-[#3C632A] px-6 py-3 rounded-2xl mb-6 text-center animate-bounce shadow-md">
+                    <p className="text-white font-bold text-base md:text-lg">{errorMsg}</p>
+                  </div>
+                )}
+
+                {lockoutTime > 0 && (
+                  <div className="w-full bg-red-100 border-4 border-red-500 rounded-2xl p-5 mb-6 text-center animate-pulse shadow-md">
+                    <p className="text-red-700 font-black text-lg">Akun Terkunci Sementara</p>
+                    <p className="text-red-600 font-bold text-sm mt-1">Terlalu banyak percobaan gagal (5x salah). Mohon tunggu:</p>
+                    <div className="text-3xl font-black text-red-700 font-mono mt-2 tracking-widest">{formatLockoutTimer(lockoutTime)}</div>
+                  </div>
+                )}
                 
                 <input 
                   type="text" 
                   required
+                  disabled={lockoutTime > 0}
                   value={roomCode}
                   onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
                   placeholder="Misal: SD4B"
-                  className="w-full px-8 py-6 bg-white border-4 border-[#3C632A] rounded-[24px] text-center text-4xl font-black text-[#3C632A] uppercase placeholder-[#3C632A]/30 focus:outline-none focus:ring-4 focus:ring-[#73B14C] shadow-[8px_8px_0px_0px_#3C632A] mb-8"
+                  className={`w-full px-8 py-6 bg-white border-4 border-[#3C632A] rounded-[24px] text-center text-4xl font-black text-[#3C632A] uppercase placeholder-[#3C632A]/30 focus:outline-none focus:ring-4 focus:ring-[#73B14C] shadow-md mb-8 ${lockoutTime > 0 ? "opacity-50 cursor-not-allowed bg-slate-100" : ""}`}
                 />
                 
-                <button type="submit" className="w-full py-5 bg-[#73B14C] border-4 border-[#3C632A] rounded-full text-white font-black text-2xl shadow-[6px_6px_0px_0px_#3C632A] hover:bg-[#3C632A] transition-colors focus:outline focus:outline-4 focus:outline-[#0066CC]">
-                  Lanjut
+                <button 
+                  type="submit" 
+                  disabled={lockoutTime > 0}
+                  className={`w-full py-5 border-4 border-[#3C632A] rounded-full text-white font-black text-2xl shadow-md hover:shadow-lg transition-all focus:outline focus:outline-4 focus:outline-[#0066CC] ${lockoutTime > 0 ? "bg-slate-400 cursor-not-allowed opacity-60" : "bg-[#73B14C] hover:bg-[#3C632A]"}`}
+                >
+                  {lockoutTime > 0 ? `Terkunci (${formatLockoutTimer(lockoutTime)})` : "Lanjut"}
                 </button>
               </form>
             )}
@@ -239,21 +388,23 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack
                 <h2 className="text-3xl font-black text-[#3C632A] mb-4 text-center">PIN Rahasia</h2>
                 <div className="flex gap-4 mb-8">
                   {[0, 1, 2, 3].map((i) => (
-                    <div key={i} className="w-16 h-20 md:w-20 md:h-24 bg-white border-4 border-[#3C632A] rounded-2xl shadow-[6px_6px_0px_0px_#3C632A] flex items-center justify-center">
-                      <span className="text-5xl font-black text-[#3C632A]">{pinCode[i] ? "★" : ""}</span>
+                    <div key={i} className="w-16 h-20 md:w-20 md:h-24 bg-white border-4 border-[#3C632A] rounded-2xl shadow-md flex items-center justify-center">
+                      <span className="text-5xl font-black text-[#3C632A]">{pinCode[i] ? "•" : ""}</span>
                     </div>
                   ))}
                 </div>
 
                 {errorMsg && (
-                  <div className="bg-[#FF5685] border-4 border-[#3C632A] px-6 py-3 rounded-full mb-6 animate-bounce">
-                    <p className="text-white font-bold text-xl">{errorMsg}</p>
+                  <div className="bg-[#FF5685] border-4 border-[#3C632A] px-6 py-3 rounded-full mb-6 text-center animate-bounce shadow-md">
+                    <p className="text-white font-bold text-lg">{errorMsg}</p>
                   </div>
                 )}
 
                 {lockoutTime > 0 ? (
-                  <div className="text-3xl font-black text-[#FF5685] animate-pulse">
-                    Tunggu {lockoutTime} detik
+                  <div className="w-full bg-red-100 border-4 border-red-500 rounded-2xl p-6 text-center animate-pulse shadow-md">
+                    <p className="text-red-700 font-black text-xl">Akses Terkunci 2 Menit</p>
+                    <p className="text-red-600 font-bold text-sm mt-1">5 kali salah PIN/Kode Kelas. Silakan tunggu hingga waktu selesai:</p>
+                    <div className="text-4xl font-black text-red-700 font-mono mt-3 tracking-widest">{formatLockoutTimer(lockoutTime)}</div>
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-4 w-full">
@@ -261,7 +412,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack
                       <button 
                         key={num}
                         onClick={() => handlePinInput(num)}
-                        className="py-6 bg-white border-4 border-[#3C632A] rounded-2xl shadow-[4px_4px_0px_0px_#3C632A] hover:bg-[#FFE296] hover:-translate-y-1 transition-all text-4xl font-black text-[#3C632A] active:translate-y-2 active:shadow-none focus:outline focus:outline-4 focus:outline-[#0066CC]"
+                        className="py-6 bg-white border-4 border-[#3C632A] rounded-2xl shadow-md hover:bg-[#FFE296] hover:-translate-y-1 transition-all text-4xl font-black text-[#3C632A] active:translate-y-1 focus:outline focus:outline-4 focus:outline-[#0066CC]"
                       >
                         {num}
                       </button>
@@ -269,13 +420,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack
                     <div />
                     <button 
                       onClick={() => handlePinInput("0")}
-                      className="py-6 bg-white border-4 border-[#3C632A] rounded-2xl shadow-[4px_4px_0px_0px_#3C632A] hover:bg-[#FFE296] hover:-translate-y-1 transition-all text-4xl font-black text-[#3C632A] active:translate-y-2 active:shadow-none focus:outline focus:outline-4 focus:outline-[#0066CC]"
+                      className="py-6 bg-white border-4 border-[#3C632A] rounded-2xl shadow-md hover:bg-[#FFE296] hover:-translate-y-1 transition-all text-4xl font-black text-[#3C632A] active:translate-y-1 focus:outline focus:outline-4 focus:outline-[#0066CC]"
                     >
                       0
                     </button>
                     <button 
                       onClick={handleDeletePin}
-                      className="py-6 bg-[#FF5685] border-4 border-[#3C632A] rounded-2xl shadow-[4px_4px_0px_0px_#3C632A] hover:bg-[#FF784E] hover:-translate-y-1 transition-all flex items-center justify-center active:translate-y-2 active:shadow-none focus:outline focus:outline-4 focus:outline-[#0066CC]"
+                      className="py-6 bg-[#FF5685] border-4 border-[#3C632A] rounded-2xl shadow-md hover:bg-[#FF784E] hover:-translate-y-1 transition-all flex items-center justify-center active:translate-y-1 focus:outline focus:outline-4 focus:outline-[#0066CC]"
                     >
                       <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z" /></svg>
                     </button>
@@ -288,15 +439,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack
               <div className="w-full flex flex-col items-center animate-in zoom-in duration-500">
                 <h2 className="text-4xl font-black text-[#3C632A] mb-8 text-center">Halo, {studentProfile.full_name}!</h2>
                 
-                <div className="w-48 h-48 bg-white border-4 border-[#3C632A] rounded-full shadow-[8px_8px_0px_0px_#3C632A] mb-10 overflow-hidden bg-cover bg-center" style={{ backgroundImage: `url(${studentProfile.avatar_url || '/images/default_avatar.png'})`}}>
+                <div className="w-48 h-48 bg-white border-4 border-[#3C632A] rounded-full shadow-lg mb-10 overflow-hidden bg-cover bg-center" style={{ backgroundImage: `url(${studentProfile.avatar_url || '/images/default_avatar.png'})`}}>
                   {/* Avatar Image displays here */}
                 </div>
 
                 <div className="flex gap-6 w-full max-w-md">
-                  <button onClick={() => { setSiswaStep(2); setPinCode(""); }} className="flex-1 py-5 bg-white border-4 border-[#3C632A] rounded-full text-[#3C632A] font-black text-2xl shadow-[6px_6px_0px_0px_#3C632A] hover:bg-slate-100 transition-colors">
+                  <button onClick={() => { setSiswaStep(2); setPinCode(""); }} className="flex-1 py-5 bg-white border-4 border-[#3C632A] rounded-full text-[#3C632A] font-black text-2xl shadow-md hover:shadow-lg hover:bg-slate-100 transition-all">
                     Bukan
                   </button>
-                  <button onClick={confirmSiswaLogin} className="flex-1 py-5 bg-[#73B14C] border-4 border-[#3C632A] rounded-full text-white font-black text-2xl shadow-[6px_6px_0px_0px_#3C632A] hover:bg-[#3C632A] transition-colors">
+                  <button onClick={confirmSiswaLogin} className="flex-1 py-5 bg-[#73B14C] border-4 border-[#3C632A] rounded-full text-white font-black text-2xl shadow-md hover:shadow-lg hover:bg-[#3C632A] transition-all">
                     Ya, Ini Aku!
                   </button>
                 </div>
