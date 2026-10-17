@@ -154,10 +154,10 @@ export function GameEngineStage({
         data-voice-command="kembali"
         data-no-ring="true"
         aria-label={activeLevel !== null ? "Kembali ke Peta Level" : "Kembali ke Petualangan Belajar"}
-        className="absolute top-6 left-6 text-slate-700 bg-white hover:bg-amber-50 border-2 border-amber-200 rounded-full shadow-xs hover:scale-105 transition-all flex items-center justify-center p-2.5 z-[60] cursor-pointer"
+        className="absolute top-6 left-6 text-amber-500 hover:text-amber-600 hover:scale-110 transition-transform flex items-center justify-center p-2 z-[60] cursor-pointer"
         title={activeLevel !== null ? "Kembali ke Peta Level" : "Kembali ke Petualangan Belajar"}
       >
-        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+        <svg className="w-10 h-10 drop-shadow-md" fill="currentColor" viewBox="0 0 24 24">
           <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
         </svg>
       </button>

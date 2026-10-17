@@ -97,6 +97,7 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [activeCategory, setActiveCategory] = useState<string>("semua");
   const [activeMode, setActiveMode] = useState<string>("Mode Mental");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
 
   // State Belajar Di Kelas (Embed di Dashboard)
   const [inputCode, setInputCode] = useState<string>("");
@@ -1526,11 +1527,258 @@ export default function DashboardPage() {
     }
   };
 
+  const renderSidebarNavItems = (isMobile: boolean = false) => {
+    const handleNavClick = (action: () => void) => {
+      action();
+      if (isMobile) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    return (
+      <>
+        {/* LOGO AREA (Only on Desktop sidebar) */}
+        {!isMobile && (
+          <div className="flex flex-col items-center gap-2 mb-4 mt-4 relative z-10">
+            <PintaraLogo size="md" />
+          </div>
+        )}
+
+        {/* NAVIGATION */}
+        <nav className="flex flex-col gap-3">
+          {/* RUANG GURU (If Teacher) */}
+          {userSession?.role === "guru" && (
+            <button
+              onClick={() => handleNavClick(() => setActiveTab("guru"))}
+              className={`flex items-center gap-4 px-5 py-4 rounded-[28px] font-black text-xl transition-all cursor-pointer ${activeTab === "guru" ? "bg-gradient-to-r from-amber-400 to-amber-500 text-white shadow-md shadow-amber-500/20" : "bg-transparent text-slate-700 hover:bg-amber-50 hover:text-amber-900 font-bold"}`}
+            >
+              <div className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 ${activeTab === "guru" ? "bg-white/20 text-white" : "bg-amber-100/70 text-amber-700"}`}>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+              </div>
+              Akses Guru
+            </button>
+          )}
+
+          {/* SUB-MENUS AKSES GURU */}
+          {activeTab === "guru" && userSession?.role === "guru" && (
+            <div className="ml-8 mt-1 mb-4 flex flex-col gap-2 relative">
+              <div className="absolute left-[-16px] top-0 bottom-6 w-1 bg-amber-200 rounded-full"></div>
+
+              <button
+                onClick={() => handleNavClick(() => setGuruTab("room"))}
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left cursor-pointer ${guruTab === "room" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
+              >
+                Generate Kode & Room
+              </button>
+
+              <button
+                onClick={() => handleNavClick(() => setGuruTab("siswa"))}
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left cursor-pointer ${guruTab === "siswa" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
+              >
+                Kelola Siswa
+              </button>
+
+              <button
+                onClick={() => handleNavClick(() => setGuruTab("daftar_siswa"))}
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left cursor-pointer ${guruTab === "daftar_siswa" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
+              >
+                Daftar Siswa
+              </button>
+
+              <button
+                onClick={() => {
+                  if (!hasCreatedRoom) {
+                    showGuruToast("Anda wajib membuat atau menghubungkan Room Kelas terlebih dahulu!");
+                    return;
+                  }
+                  handleNavClick(() => setGuruTab("materi"));
+                }}
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left cursor-pointer ${!hasCreatedRoom ? "opacity-50 cursor-not-allowed text-slate-400" : guruTab === "materi" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
+              >
+                Upload Materi & Kuis
+              </button>
+
+              <button
+                onClick={() => {
+                  if (!hasCreatedRoom) {
+                    showGuruToast("Anda wajib membuat atau menghubungkan Room Kelas terlebih dahulu!");
+                    return;
+                  }
+                  handleNavClick(() => setGuruTab("ujian"));
+                }}
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left cursor-pointer ${!hasCreatedRoom ? "opacity-50 cursor-not-allowed text-slate-400" : guruTab === "ujian" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
+              >
+                Upload Ujian Resmi
+              </button>
+
+              <button
+                onClick={() => {
+                  if (!hasCreatedRoom) {
+                    showGuruToast("Anda wajib membuat atau menghubungkan Room Kelas terlebih dahulu!");
+                    return;
+                  }
+                  handleNavClick(() => setGuruTab("rekap"));
+                }}
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left cursor-pointer ${!hasCreatedRoom ? "opacity-50 cursor-not-allowed text-slate-400" : guruTab === "rekap" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
+              >
+                Monitoring Content
+              </button>
+            </div>
+          )}
+
+          {/* PETUALANGAN BELAJAR */}
+          <button
+            onClick={() => handleNavClick(() => setActiveTab("katalog"))}
+            data-dashboard-area="sidebar"
+            data-scan-label="Petualangan Belajar"
+            id={isMobile ? "mobile-sidebar-btn-katalog" : "sidebar-btn-katalog"}
+            className={`flex items-center gap-4 px-5 py-4 rounded-[28px] font-black text-xl transition-all cursor-pointer ${activeTab === "katalog" ? "bg-gradient-to-r from-amber-400 to-amber-500 text-white shadow-md shadow-amber-500/20" : "bg-transparent text-slate-700 hover:bg-amber-50 hover:text-amber-900 font-bold"}`}
+          >
+            <div className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 ${activeTab === "katalog" ? "bg-white/20 text-white" : "bg-amber-100/70 text-amber-700"}`}>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+            </div>
+            Petualangan Belajar
+          </button>
+
+          {/* KELAS IMPIANKU */}
+          <button
+            onClick={() => handleNavClick(() => setActiveTab("kelas"))}
+            data-dashboard-area="sidebar"
+            data-scan-label="Kelas Impianku"
+            id={isMobile ? "mobile-sidebar-btn-kelas" : "sidebar-btn-kelas"}
+            className={`flex items-center gap-4 px-5 py-4 rounded-[28px] font-black text-xl transition-all cursor-pointer ${activeTab === "kelas" ? "bg-gradient-to-r from-amber-400 to-amber-500 text-white shadow-md shadow-amber-500/20" : "bg-transparent text-slate-700 hover:bg-amber-50 hover:text-amber-900 font-bold"}`}
+          >
+            <div className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 ${activeTab === "kelas" ? "bg-white/20 text-white" : "bg-amber-100/70 text-amber-700"}`}>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+            </div>
+            Kelas Impianku
+          </button>
+
+          {/* SUB-MENUS KELAS IMPIANKU */}
+          {activeTab === "kelas" && (
+            <div className="ml-8 mt-1 flex flex-col gap-2 relative">
+              <div className="absolute left-[-16px] top-0 bottom-6 w-1 bg-amber-200 rounded-full"></div>
+
+              <button
+                onClick={() => handleNavClick(() => setActiveSidebarTab("kelas"))}
+                data-dashboard-area="sidebar"
+                data-scan-label="Tab Kelas"
+                id={isMobile ? "mobile-sidebar-btn-sub-kelas" : "sidebar-btn-sub-kelas"}
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-lg transition-all cursor-pointer ${activeSidebarTab === "kelas" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
+              >
+                <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9.5a2 2 0 00-2-2h-2" /></svg>
+                Kelas
+              </button>
+
+              <button
+                onClick={() => handleNavClick(() => setActiveSidebarTab("materi"))}
+                data-dashboard-area="sidebar"
+                data-scan-label="Buku Pintar"
+                id={isMobile ? "mobile-sidebar-btn-sub-buku" : "sidebar-btn-sub-buku"}
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-lg transition-all cursor-pointer ${activeSidebarTab === "materi" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
+              >
+                <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                Buku Pintar
+              </button>
+
+              <button
+                onClick={() => handleNavClick(() => setActiveSidebarTab("latihan"))}
+                data-dashboard-area="sidebar"
+                data-scan-label="Tantangan"
+                id={isMobile ? "mobile-sidebar-btn-sub-tantangan" : "sidebar-btn-sub-tantangan"}
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-lg transition-all cursor-pointer ${activeSidebarTab === "latihan" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
+              >
+                <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /></svg>
+                Tantangan
+              </button>
+
+              <button
+                onClick={() => handleNavClick(() => setActiveSidebarTab("ujian"))}
+                data-dashboard-area="sidebar"
+                data-scan-label="Misi Akhir"
+                id={isMobile ? "mobile-sidebar-btn-sub-ujian" : "sidebar-btn-sub-ujian"}
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-lg transition-all cursor-pointer ${activeSidebarTab === "ujian" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
+              >
+                <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                Misi Akhir
+              </button>
+            </div>
+          )}
+        </nav>
+
+        {/* BOTTOM AREA */}
+        <div className="mt-8 flex flex-col gap-3 pt-6 border-t-2 border-amber-100/70 relative z-10">
+          {userSession?.role === "siswa" && (
+            <button
+              onClick={() => handleNavClick(handleChangeMode)}
+              data-dashboard-area="sidebar"
+              data-scan-label={`Mode ${activeMode}`}
+              id={isMobile ? "mobile-sidebar-btn-mode" : "sidebar-btn-mode"}
+              className="w-full px-5 py-4 bg-white/80 hover:bg-white text-amber-900 border-2 border-white/90 ring-1 ring-amber-200/70 shadow-xs hover:shadow-md font-black rounded-[24px] transition-all flex items-center justify-center gap-3 cursor-pointer"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+              {activeMode}
+            </button>
+          )}
+
+          <button
+            onClick={() => { clearActiveSession(); router.push("/"); }}
+            data-dashboard-area="sidebar"
+            data-scan-label="Keluar Akun"
+            id={isMobile ? "mobile-sidebar-btn-logout" : "sidebar-btn-logout"}
+            className="w-full px-5 py-4 bg-rose-50/80 hover:bg-rose-100 border-2 border-rose-200/80 shadow-xs hover:shadow-md text-rose-600 font-black rounded-[24px] transition-all flex items-center justify-center gap-3 cursor-pointer"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+            Keluar Akun
+          </button>
+        </div>
+      </>
+    );
+  };
+
   return (
 
     <div className="min-h-screen bg-[#FFF9EE] font-sans text-slate-800 relative flex overflow-x-hidden">
 
-      {/* Tombol Kembali ke Beranda */}
+      {/* Mobile Top Header Bar (Tampilan HP) */}
+      {!isExamFullscreen && (
+        <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-[#FFF9EE]/95 backdrop-blur-md z-[55] border-b border-amber-200/70 px-4 flex items-center justify-between shadow-xs">
+          {/* Tombol Back Mobile */}
+          <button
+            onClick={() => router.push("/")}
+            id="btn-back-home-mobile"
+            className="text-amber-500 hover:text-amber-600 p-1 flex items-center justify-center transition-transform active:scale-95 cursor-pointer"
+            title="Kembali ke Beranda"
+            aria-label="Kembali ke Beranda"
+          >
+            <svg className="w-8 h-8 drop-shadow-sm" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
+            </svg>
+          </button>
+
+          {/* Logo Tengah */}
+          <div className="flex items-center">
+            <PintaraLogo size="sm" />
+          </div>
+
+          {/* Tombol Titik Tiga (Menu Sidebar Mobile) */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            id="btn-mobile-menu-toggle"
+            aria-label="Buka Menu"
+            className="w-10 h-10 bg-white hover:bg-amber-50 text-slate-800 border-2 border-amber-200 rounded-2xl shadow-xs flex items-center justify-center transition-all active:scale-95 cursor-pointer"
+            title="Menu Navigasi"
+          >
+            <svg className="w-6 h-6 text-slate-700" fill="currentColor" viewBox="0 0 24 24">
+              <circle cx="12" cy="5" r="2.2" />
+              <circle cx="12" cy="12" r="2.2" />
+              <circle cx="12" cy="19" r="2.2" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {/* Tombol Kembali ke Beranda (Desktop Saja) */}
       {!isExamFullscreen && (
         <button
           onClick={() => router.push("/")}
@@ -1538,227 +1786,62 @@ export default function DashboardPage() {
           data-dashboard-area="sidebar"
           data-scan-label="Kembali ke Beranda"
           data-no-ring="true"
-          className="absolute top-6 left-6 text-amber-500 hover:text-amber-600 hover:scale-110 transition-transform flex items-center justify-center p-2 z-[60]"
+          className="hidden lg:flex absolute top-6 left-6 text-amber-500 hover:text-amber-600 hover:scale-110 transition-transform items-center justify-center p-2 z-[60] cursor-pointer"
           title="Kembali ke Halaman Utama"
         >
           <svg className="w-10 h-10 drop-shadow-md" fill="currentColor" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" /></svg>
         </button>
       )}
 
-      {/* ==================== 1. SIDEBAR ==================== */}
+      {/* ==================== 1. SIDEBAR (DESKTOP) ==================== */}
       {!isExamFullscreen && (
-        <aside className="w-[300px] mt-24 mb-10 ml-8 bg-gradient-to-b from-white/60 via-white/45 to-white/50 hover:from-white/70 hover:to-white/55 rounded-[36px] flex flex-col p-6 z-50 shadow-[0_16px_40px_rgba(217,119,6,0.08),inset_0_1.5px_1px_rgba(255,255,255,0.95)] shrink-0 border border-white/80 ring-1 ring-amber-200/50 sticky top-24 self-start relative overflow-hidden transition-all duration-300">
-          {/* Specular Light Flare (Image 1 reference) */}
+        <aside className="hidden lg:flex w-[300px] mt-24 mb-10 ml-8 bg-gradient-to-b from-white/60 via-white/45 to-white/50 hover:from-white/70 hover:to-white/55 rounded-[36px] flex-col p-6 z-50 shadow-[0_16px_40px_rgba(217,119,6,0.08),inset_0_1.5px_1px_rgba(255,255,255,0.95)] shrink-0 border border-white/80 ring-1 ring-amber-200/50 sticky top-24 self-start relative overflow-hidden transition-all duration-300">
+          {/* Specular Light Flare */}
           <div className="absolute -top-[1.5px] left-1/2 -translate-x-1/2 w-36 h-[3px] bg-white rounded-full shadow-[0_0_14px_4px_rgba(255,255,255,1)] pointer-events-none" />
           {/* Glass specular sheen */}
           <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-white/45 via-white/10 to-transparent pointer-events-none rounded-t-[34px]" />
 
-          {/* LOGO AREA */}
-          <div className="flex flex-col items-center gap-2 mb-4 mt-4 relative z-10">
-            <PintaraLogo size="md" />
-          </div>
-
-          {/* NAVIGATION */}
-          <nav className="flex flex-col gap-3">
-
-            {/* RUANG GURU (If Teacher) */}
-            {userSession?.role === "guru" && (
-              <button
-                onClick={() => setActiveTab("guru")}
-                className={`flex items-center gap-4 px-5 py-4 rounded-[28px] font-black text-xl transition-all ${activeTab === "guru" ? "bg-gradient-to-r from-amber-400 to-amber-500 text-white shadow-md shadow-amber-500/20" : "bg-transparent text-slate-700 hover:bg-amber-50 hover:text-amber-900 font-bold"}`}
-              >
-                <div className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 ${activeTab === "guru" ? "bg-white/20 text-white" : "bg-amber-100/70 text-amber-700"}`}>
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                </div>
-                Akses Guru
-              </button>
-            )}
-
-
-            {/* SUB-MENUS AKSES GURU */}
-            {activeTab === "guru" && userSession?.role === "guru" && (
-              <div className="ml-8 mt-1 mb-4 flex flex-col gap-2 relative">
-                <div className="absolute left-[-16px] top-0 bottom-6 w-1 bg-amber-200 rounded-full"></div>
-
-                <button
-                  onClick={() => setGuruTab("room")}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${guruTab === "room" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
-                >
-                  Generate Kode & Room
-                </button>
-
-                <button
-                  onClick={() => setGuruTab("siswa")}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${guruTab === "siswa" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
-                >
-                  Kelola Siswa
-                </button>
-
-                <button
-                  onClick={() => setGuruTab("daftar_siswa")}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${guruTab === "daftar_siswa" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
-                >
-                  Daftar Siswa
-                </button>
-
-                <button
-                  onClick={() => {
-                    if (!hasCreatedRoom) {
-                      showGuruToast("Anda wajib membuat atau menghubungkan Room Kelas terlebih dahulu!");
-                      return;
-                    }
-                    setGuruTab("materi");
-                  }}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${!hasCreatedRoom ? "opacity-50 cursor-not-allowed text-slate-400" : guruTab === "materi" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
-                >
-                  Upload Materi & Kuis
-                </button>
-
-                <button
-                  onClick={() => {
-                    if (!hasCreatedRoom) {
-                      showGuruToast("Anda wajib membuat atau menghubungkan Room Kelas terlebih dahulu!");
-                      return;
-                    }
-                    setGuruTab("ujian");
-                  }}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${!hasCreatedRoom ? "opacity-50 cursor-not-allowed text-slate-400" : guruTab === "ujian" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
-                >
-                  Upload Ujian Resmi
-                </button>
-
-                <button
-                  onClick={() => {
-                    if (!hasCreatedRoom) {
-                      showGuruToast("Anda wajib membuat atau menghubungkan Room Kelas terlebih dahulu!");
-                      return;
-                    }
-                    setGuruTab("rekap");
-                  }}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${!hasCreatedRoom ? "opacity-50 cursor-not-allowed text-slate-400" : guruTab === "rekap" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
-                >
-                  Monitoring Content
-                </button>
-              </div>
-            )}
-
-            {/* PETUALANGAN BELAJAR */}
-            <button
-              onClick={() => setActiveTab("katalog")}
-              data-dashboard-area="sidebar"
-              data-scan-label="Petualangan Belajar"
-              id="sidebar-btn-katalog"
-              className={`flex items-center gap-4 px-5 py-4 rounded-[28px] font-black text-xl transition-all ${activeTab === "katalog" ? "bg-gradient-to-r from-amber-400 to-amber-500 text-white shadow-md shadow-amber-500/20" : "bg-transparent text-slate-700 hover:bg-amber-50 hover:text-amber-900 font-bold"}`}
-            >
-              <div className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 ${activeTab === "katalog" ? "bg-white/20 text-white" : "bg-amber-100/70 text-amber-700"}`}>
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
-              </div>
-              Petualangan Belajar
-            </button>
-
-            {/* KELAS IMPIANKU */}
-            <button
-              onClick={() => setActiveTab("kelas")}
-              data-dashboard-area="sidebar"
-              data-scan-label="Kelas Impianku"
-              id="sidebar-btn-kelas"
-              className={`flex items-center gap-4 px-5 py-4 rounded-[28px] font-black text-xl transition-all ${activeTab === "kelas" ? "bg-gradient-to-r from-amber-400 to-amber-500 text-white shadow-md shadow-amber-500/20" : "bg-transparent text-slate-700 hover:bg-amber-50 hover:text-amber-900 font-bold"}`}
-            >
-              <div className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 ${activeTab === "kelas" ? "bg-white/20 text-white" : "bg-amber-100/70 text-amber-700"}`}>
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-              </div>
-              Kelas Impianku
-            </button>
-
-            {/* SUB-MENUS KELAS IMPIANKU */}
-            {activeTab === "kelas" && (
-              <div className="ml-8 mt-1 flex flex-col gap-2 relative">
-                <div className="absolute left-[-16px] top-0 bottom-6 w-1 bg-amber-200 rounded-full"></div>
-
-                <button
-                  onClick={() => setActiveSidebarTab("kelas")}
-                  data-dashboard-area="sidebar"
-                  data-scan-label="Tab Kelas"
-                  id="sidebar-btn-sub-kelas"
-                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-lg transition-all ${activeSidebarTab === "kelas" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
-                >
-                  <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9.5a2 2 0 00-2-2h-2" /></svg>
-                  Kelas
-                </button>
-
-                <button
-                  onClick={() => setActiveSidebarTab("materi")}
-                  data-dashboard-area="sidebar"
-                  data-scan-label="Buku Pintar"
-                  id="sidebar-btn-sub-buku"
-                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-lg transition-all ${activeSidebarTab === "materi" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
-                >
-                  <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-                  Buku Pintar
-                </button>
-
-                <button
-                  onClick={() => setActiveSidebarTab("latihan")}
-                  data-dashboard-area="sidebar"
-                  data-scan-label="Tantangan"
-                  id="sidebar-btn-sub-tantangan"
-                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-lg transition-all ${activeSidebarTab === "latihan" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
-                >
-                  <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /></svg>
-                  Tantangan
-                </button>
-
-                <button
-                  onClick={() => setActiveSidebarTab("ujian")}
-                  data-dashboard-area="sidebar"
-                  data-scan-label="Misi Akhir"
-                  id="sidebar-btn-sub-ujian"
-                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-lg transition-all ${activeSidebarTab === "ujian" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
-                >
-                  <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                  Misi Akhir
-                </button>
-              </div>
-            )}
-          </nav>
-
-          {/* BOTTOM AREA */}
-          <div className="mt-8 flex flex-col gap-3 pt-6 border-t-2 border-amber-100/70 relative z-10">
-            {userSession?.role === "siswa" && (
-              <button
-                onClick={handleChangeMode}
-                data-dashboard-area="sidebar"
-                data-scan-label={`Mode ${activeMode}`}
-                id="sidebar-btn-mode"
-                className="w-full px-5 py-4 bg-white/80 hover:bg-white text-amber-900 border-2 border-white/90 ring-1 ring-amber-200/70 shadow-xs hover:shadow-md font-black rounded-[24px] transition-all flex items-center justify-center gap-3 cursor-pointer"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                {activeMode}
-              </button>
-            )}
-
-            <button
-              onClick={() => { clearActiveSession(); router.push("/"); }}
-              data-dashboard-area="sidebar"
-              data-scan-label="Keluar Akun"
-              id="sidebar-btn-logout"
-              className="w-full px-5 py-4 bg-rose-50/80 hover:bg-rose-100 border-2 border-rose-200/80 shadow-xs hover:shadow-md text-rose-600 font-black rounded-[24px] transition-all flex items-center justify-center gap-3 cursor-pointer"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-              Keluar Akun
-            </button>
-          </div>
+          {renderSidebarNavItems(false)}
         </aside>
       )}
 
+      {/* ==================== MOBILE DRAWER OVERLAY ==================== */}
+      {!isExamFullscreen && isMobileMenuOpen && (
+        <div
+          className="lg:hidden fixed inset-0 z-[70] bg-slate-900/50 backdrop-blur-sm transition-opacity animate-in fade-in duration-200 flex justify-end"
+          onClick={() => setIsMobileMenuOpen(false)}
+        >
+          <div
+            className="w-[85%] max-w-[340px] h-full bg-[#FFF9EE] border-l-2 border-amber-200 p-6 flex flex-col shadow-2xl overflow-y-auto animate-in slide-in-from-right duration-300 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header Drawer Mobile */}
+            <div className="flex items-center justify-between pb-4 border-b border-amber-200/70 mb-4 shrink-0">
+              <PintaraLogo size="sm" />
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="w-10 h-10 bg-white border-2 border-amber-200 rounded-full flex items-center justify-center text-slate-700 hover:bg-amber-50 transition-colors shadow-xs cursor-pointer"
+                aria-label="Tutup Menu"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {renderSidebarNavItems(true)}
+          </div>
+        </div>
+      )}
+
       {/* ==================== 2. MAIN CONTENT ==================== */}
-      <div className="flex-1 flex flex-col w-full min-h-screen">
+      <div className="flex-1 flex flex-col w-full min-h-screen min-w-0">
 
         {/* ==================== 2. MAIN CONTENT AREA (HERO SECTION REPLACEMENT) ==================== */}
         {/* VIEW 1: KATALOG MAPEL */}
 
         {activeTab === "katalog" && (
-          <div className="flex-1 bg-gradient-to-br from-white/50 via-white/35 to-amber-50/20 rounded-[36px] p-8 mt-24 mr-6 ml-6 mb-10 shadow-[0_16px_40px_rgba(217,119,6,0.06)] flex flex-col relative animate-in fade-in duration-300 border border-white/80 ring-1 ring-amber-200/50">
+          <div className="flex-1 bg-gradient-to-br from-white/50 via-white/35 to-amber-50/20 rounded-[28px] lg:rounded-[36px] p-4 sm:p-6 lg:p-8 mt-20 lg:mt-24 mx-3 sm:mx-4 lg:mr-6 lg:ml-6 mb-8 lg:mb-10 shadow-[0_16px_40px_rgba(217,119,6,0.06)] flex flex-col relative animate-in fade-in duration-300 border border-white/80 ring-1 ring-amber-200/50">
             {/* Specular Light Flare */}
             <div className="absolute -top-[1.5px] left-1/2 -translate-x-1/2 w-64 md:w-96 h-[3px] bg-white rounded-full shadow-[0_0_12px_2px_rgba(255,255,255,0.9)] pointer-events-none" />
             {/* Glass highlight band */}
@@ -1915,7 +1998,7 @@ export default function DashboardPage() {
 
         {/* VIEW 2: BELAJAR DI KELAS (LANGSUNG DITAMPILKAN DI PUSAT HERO SECTION DASHBOARD - ENLARGED HERO LAYOUT) */}
         {activeTab === "kelas" && (
-          <div className="flex-1 bg-gradient-to-br from-white/50 via-white/35 to-amber-50/20 rounded-[36px] p-8 mt-24 mr-6 ml-6 mb-10 shadow-[0_16px_40px_rgba(217,119,6,0.06)] flex flex-col relative animate-in fade-in duration-300 border border-white/80 ring-1 ring-amber-200/50">
+          <div className="flex-1 bg-gradient-to-br from-white/50 via-white/35 to-amber-50/20 rounded-[28px] lg:rounded-[36px] p-4 sm:p-6 lg:p-8 mt-20 lg:mt-24 mx-3 sm:mx-4 lg:mr-6 lg:ml-6 mb-8 lg:mb-10 shadow-[0_16px_40px_rgba(217,119,6,0.06)] flex flex-col relative animate-in fade-in duration-300 border border-white/80 ring-1 ring-amber-200/50">
             {/* Specular Light Flare */}
             <div className="absolute -top-[1.5px] left-1/2 -translate-x-1/2 w-64 md:w-96 h-[3px] bg-white rounded-full shadow-[0_0_12px_2px_rgba(255,255,255,0.9)] pointer-events-none" />
             {/* Glass highlight band */}
@@ -2699,7 +2782,7 @@ export default function DashboardPage() {
 
         {/* VIEW 3: AKSES GURU */}
         {activeTab === "guru" && (
-          <div className="flex-1 bg-gradient-to-br from-white/50 via-white/35 to-amber-50/20 rounded-[36px] p-8 mt-24 mr-6 ml-6 mb-10 shadow-[0_16px_40px_rgba(217,119,6,0.06)] flex flex-col relative animate-in fade-in duration-300 border border-white/80 ring-1 ring-amber-200/50">
+          <div className="flex-1 bg-gradient-to-br from-white/50 via-white/35 to-amber-50/20 rounded-[28px] lg:rounded-[36px] p-4 sm:p-6 lg:p-8 mt-20 lg:mt-24 mx-3 sm:mx-4 lg:mr-6 lg:ml-6 mb-8 lg:mb-10 shadow-[0_16px_40px_rgba(217,119,6,0.06)] flex flex-col relative animate-in fade-in duration-300 border border-white/80 ring-1 ring-amber-200/50">
             {/* Specular Light Flare */}
             <div className="absolute -top-[1.5px] left-1/2 -translate-x-1/2 w-64 md:w-96 h-[3px] bg-white rounded-full shadow-[0_0_12px_2px_rgba(255,255,255,0.9)] pointer-events-none" />
             {/* Glass highlight band */}
