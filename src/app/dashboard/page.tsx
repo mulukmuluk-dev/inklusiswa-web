@@ -1766,7 +1766,11 @@ export default function DashboardPage() {
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             id="btn-mobile-menu-toggle"
             aria-label="Buka Menu"
-            className="w-10 h-10 bg-white hover:bg-amber-50 text-slate-800 border-2 border-amber-200 rounded-2xl shadow-xs flex items-center justify-center transition-all active:scale-95 cursor-pointer"
+            className={`w-10 h-10 rounded-2xl border-2 flex items-center justify-center transition-all duration-300 active:scale-90 cursor-pointer ${
+              isMobileMenuOpen
+                ? "bg-amber-100 border-amber-400 rotate-90 text-amber-900 shadow-sm"
+                : "bg-white hover:bg-amber-50 text-slate-800 border-amber-200 shadow-xs"
+            }`}
             title="Menu Navigasi"
           >
             <svg className="w-6 h-6 text-slate-700" fill="currentColor" viewBox="0 0 24 24">
@@ -1806,13 +1810,19 @@ export default function DashboardPage() {
       )}
 
       {/* ==================== MOBILE DRAWER OVERLAY ==================== */}
-      {!isExamFullscreen && isMobileMenuOpen && (
+      {!isExamFullscreen && (
         <div
-          className="lg:hidden fixed inset-0 z-[70] bg-slate-900/50 backdrop-blur-sm transition-opacity animate-in fade-in duration-200 flex justify-end"
+          className={`lg:hidden fixed inset-0 z-[70] transition-all duration-300 ease-in-out ${
+            isMobileMenuOpen
+              ? "opacity-100 pointer-events-auto bg-slate-900/60 backdrop-blur-sm"
+              : "opacity-0 pointer-events-none"
+          }`}
           onClick={() => setIsMobileMenuOpen(false)}
         >
           <div
-            className="w-[85%] max-w-[340px] h-full bg-[#FFF9EE] border-l-2 border-amber-200 p-6 flex flex-col shadow-2xl overflow-y-auto animate-in slide-in-from-right duration-300 relative"
+            className={`w-[85%] max-w-[340px] h-full bg-[#FFF9EE] border-l-2 border-amber-200 p-6 flex flex-col shadow-2xl overflow-y-auto ml-auto transform transition-transform duration-300 ease-out ${
+              isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
+            }`}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header Drawer Mobile */}
@@ -1820,7 +1830,7 @@ export default function DashboardPage() {
               <PintaraLogo size="sm" />
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="w-10 h-10 bg-white border-2 border-amber-200 rounded-full flex items-center justify-center text-slate-700 hover:bg-amber-50 transition-colors shadow-xs cursor-pointer"
+                className="w-10 h-10 bg-white border-2 border-amber-200 rounded-full flex items-center justify-center text-slate-700 hover:bg-amber-50 active:scale-95 transition-all shadow-xs cursor-pointer"
                 aria-label="Tutup Menu"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
