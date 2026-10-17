@@ -1548,207 +1548,207 @@ export default function DashboardPage() {
       {/* ==================== 1. SIDEBAR ==================== */}
       {!isExamFullscreen && (
         <aside className="w-[300px] mt-24 mb-10 ml-8 bg-gradient-to-b from-white/60 via-white/45 to-white/50 hover:from-white/70 hover:to-white/55 rounded-[36px] flex flex-col p-6 z-50 shadow-[0_16px_40px_rgba(217,119,6,0.08),inset_0_1.5px_1px_rgba(255,255,255,0.95)] shrink-0 border border-white/80 ring-1 ring-amber-200/50 sticky top-24 self-start relative overflow-hidden transition-all duration-300">
-        {/* Specular Light Flare (Image 1 reference) */}
-        <div className="absolute -top-[1.5px] left-1/2 -translate-x-1/2 w-36 h-[3px] bg-white rounded-full shadow-[0_0_14px_4px_rgba(255,255,255,1)] pointer-events-none" />
-        {/* Glass specular sheen */}
-        <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-white/45 via-white/10 to-transparent pointer-events-none rounded-t-[34px]" />
+          {/* Specular Light Flare (Image 1 reference) */}
+          <div className="absolute -top-[1.5px] left-1/2 -translate-x-1/2 w-36 h-[3px] bg-white rounded-full shadow-[0_0_14px_4px_rgba(255,255,255,1)] pointer-events-none" />
+          {/* Glass specular sheen */}
+          <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-white/45 via-white/10 to-transparent pointer-events-none rounded-t-[34px]" />
 
-        {/* LOGO AREA */}
-        <div className="flex flex-col items-center gap-2 mb-4 mt-4 relative z-10">
-          <PintaraLogo size="md" />
-        </div>
+          {/* LOGO AREA */}
+          <div className="flex flex-col items-center gap-2 mb-4 mt-4 relative z-10">
+            <PintaraLogo size="md" />
+          </div>
 
-        {/* NAVIGATION */}
-        <nav className="flex flex-col gap-3">
+          {/* NAVIGATION */}
+          <nav className="flex flex-col gap-3">
 
-          {/* RUANG GURU (If Teacher) */}
-          {userSession?.role === "guru" && (
-            <button
-              onClick={() => setActiveTab("guru")}
-              className={`flex items-center gap-4 px-5 py-4 rounded-[28px] font-black text-xl transition-all ${activeTab === "guru" ? "bg-gradient-to-r from-amber-400 to-amber-500 text-white shadow-md shadow-amber-500/20" : "bg-transparent text-slate-700 hover:bg-amber-50 hover:text-amber-900 font-bold"}`}
-            >
-              <div className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 ${activeTab === "guru" ? "bg-white/20 text-white" : "bg-amber-100/70 text-amber-700"}`}>
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+            {/* RUANG GURU (If Teacher) */}
+            {userSession?.role === "guru" && (
+              <button
+                onClick={() => setActiveTab("guru")}
+                className={`flex items-center gap-4 px-5 py-4 rounded-[28px] font-black text-xl transition-all ${activeTab === "guru" ? "bg-gradient-to-r from-amber-400 to-amber-500 text-white shadow-md shadow-amber-500/20" : "bg-transparent text-slate-700 hover:bg-amber-50 hover:text-amber-900 font-bold"}`}
+              >
+                <div className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 ${activeTab === "guru" ? "bg-white/20 text-white" : "bg-amber-100/70 text-amber-700"}`}>
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                </div>
+                Akses Guru
+              </button>
+            )}
+
+
+            {/* SUB-MENUS AKSES GURU */}
+            {activeTab === "guru" && userSession?.role === "guru" && (
+              <div className="ml-8 mt-1 mb-4 flex flex-col gap-2 relative">
+                <div className="absolute left-[-16px] top-0 bottom-6 w-1 bg-amber-200 rounded-full"></div>
+
+                <button
+                  onClick={() => setGuruTab("room")}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${guruTab === "room" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
+                >
+                  Generate Kode & Room
+                </button>
+
+                <button
+                  onClick={() => setGuruTab("siswa")}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${guruTab === "siswa" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
+                >
+                  Kelola Siswa
+                </button>
+
+                <button
+                  onClick={() => setGuruTab("daftar_siswa")}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${guruTab === "daftar_siswa" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
+                >
+                  Daftar Siswa
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (!hasCreatedRoom) {
+                      showGuruToast("Anda wajib membuat atau menghubungkan Room Kelas terlebih dahulu!");
+                      return;
+                    }
+                    setGuruTab("materi");
+                  }}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${!hasCreatedRoom ? "opacity-50 cursor-not-allowed text-slate-400" : guruTab === "materi" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
+                >
+                  Upload Materi & Kuis
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (!hasCreatedRoom) {
+                      showGuruToast("Anda wajib membuat atau menghubungkan Room Kelas terlebih dahulu!");
+                      return;
+                    }
+                    setGuruTab("ujian");
+                  }}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${!hasCreatedRoom ? "opacity-50 cursor-not-allowed text-slate-400" : guruTab === "ujian" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
+                >
+                  Upload Ujian Resmi
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (!hasCreatedRoom) {
+                      showGuruToast("Anda wajib membuat atau menghubungkan Room Kelas terlebih dahulu!");
+                      return;
+                    }
+                    setGuruTab("rekap");
+                  }}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${!hasCreatedRoom ? "opacity-50 cursor-not-allowed text-slate-400" : guruTab === "rekap" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
+                >
+                  Monitoring Content
+                </button>
               </div>
-              Akses Guru
-            </button>
-          )}
+            )}
 
-
-          {/* SUB-MENUS AKSES GURU */}
-          {activeTab === "guru" && userSession?.role === "guru" && (
-            <div className="ml-8 mt-1 mb-4 flex flex-col gap-2 relative">
-              <div className="absolute left-[-16px] top-0 bottom-6 w-1 bg-amber-200 rounded-full"></div>
-
-              <button
-                onClick={() => setGuruTab("room")}
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${guruTab === "room" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
-              >
-                Generate Kode & Room
-              </button>
-
-              <button
-                onClick={() => setGuruTab("siswa")}
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${guruTab === "siswa" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
-              >
-                Kelola Siswa
-              </button>
-
-              <button
-                onClick={() => setGuruTab("daftar_siswa")}
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${guruTab === "daftar_siswa" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
-              >
-                Daftar Siswa
-              </button>
-
-              <button
-                onClick={() => {
-                  if (!hasCreatedRoom) {
-                    showGuruToast("Anda wajib membuat atau menghubungkan Room Kelas terlebih dahulu!");
-                    return;
-                  }
-                  setGuruTab("materi");
-                }}
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${!hasCreatedRoom ? "opacity-50 cursor-not-allowed text-slate-400" : guruTab === "materi" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
-              >
-                Upload Materi & Kuis
-              </button>
-
-              <button
-                onClick={() => {
-                  if (!hasCreatedRoom) {
-                    showGuruToast("Anda wajib membuat atau menghubungkan Room Kelas terlebih dahulu!");
-                    return;
-                  }
-                  setGuruTab("ujian");
-                }}
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${!hasCreatedRoom ? "opacity-50 cursor-not-allowed text-slate-400" : guruTab === "ujian" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
-              >
-                Upload Ujian Resmi
-              </button>
-
-              <button
-                onClick={() => {
-                  if (!hasCreatedRoom) {
-                    showGuruToast("Anda wajib membuat atau menghubungkan Room Kelas terlebih dahulu!");
-                    return;
-                  }
-                  setGuruTab("rekap");
-                }}
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-sm md:text-base transition-all text-left ${!hasCreatedRoom ? "opacity-50 cursor-not-allowed text-slate-400" : guruTab === "rekap" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
-              >
-                Monitoring Content
-              </button>
-            </div>
-          )}
-
-          {/* PETUALANGAN BELAJAR */}
-          <button
-            onClick={() => setActiveTab("katalog")}
-            data-dashboard-area="sidebar"
-            data-scan-label="Petualangan Belajar"
-            id="sidebar-btn-katalog"
-            className={`flex items-center gap-4 px-5 py-4 rounded-[28px] font-black text-xl transition-all ${activeTab === "katalog" ? "bg-gradient-to-r from-amber-400 to-amber-500 text-white shadow-md shadow-amber-500/20" : "bg-transparent text-slate-700 hover:bg-amber-50 hover:text-amber-900 font-bold"}`}
-          >
-            <div className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 ${activeTab === "katalog" ? "bg-white/20 text-white" : "bg-amber-100/70 text-amber-700"}`}>
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
-            </div>
-            Petualangan Belajar
-          </button>
-
-          {/* KELAS IMPIANKU */}
-          <button
-            onClick={() => setActiveTab("kelas")}
-            data-dashboard-area="sidebar"
-            data-scan-label="Kelas Impianku"
-            id="sidebar-btn-kelas"
-            className={`flex items-center gap-4 px-5 py-4 rounded-[28px] font-black text-xl transition-all ${activeTab === "kelas" ? "bg-gradient-to-r from-amber-400 to-amber-500 text-white shadow-md shadow-amber-500/20" : "bg-transparent text-slate-700 hover:bg-amber-50 hover:text-amber-900 font-bold"}`}
-          >
-            <div className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 ${activeTab === "kelas" ? "bg-white/20 text-white" : "bg-amber-100/70 text-amber-700"}`}>
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-            </div>
-            Kelas Impianku
-          </button>
-
-          {/* SUB-MENUS KELAS IMPIANKU */}
-          {activeTab === "kelas" && (
-            <div className="ml-8 mt-1 flex flex-col gap-2 relative">
-              <div className="absolute left-[-16px] top-0 bottom-6 w-1 bg-amber-200 rounded-full"></div>
-
-              <button
-                onClick={() => setActiveSidebarTab("kelas")}
-                data-dashboard-area="sidebar"
-                data-scan-label="Tab Kelas"
-                id="sidebar-btn-sub-kelas"
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-lg transition-all ${activeSidebarTab === "kelas" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
-              >
-                <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9.5a2 2 0 00-2-2h-2" /></svg>
-                Kelas
-              </button>
-
-              <button
-                onClick={() => setActiveSidebarTab("materi")}
-                data-dashboard-area="sidebar"
-                data-scan-label="Buku Pintar"
-                id="sidebar-btn-sub-buku"
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-lg transition-all ${activeSidebarTab === "materi" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
-              >
-                <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-                Buku Pintar
-              </button>
-
-              <button
-                onClick={() => setActiveSidebarTab("latihan")}
-                data-dashboard-area="sidebar"
-                data-scan-label="Tantangan"
-                id="sidebar-btn-sub-tantangan"
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-lg transition-all ${activeSidebarTab === "latihan" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
-              >
-                <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /></svg>
-                Tantangan
-              </button>
-
-              <button
-                onClick={() => setActiveSidebarTab("ujian")}
-                data-dashboard-area="sidebar"
-                data-scan-label="Misi Akhir"
-                id="sidebar-btn-sub-ujian"
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-lg transition-all ${activeSidebarTab === "ujian" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
-              >
-                <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                Misi Akhir
-              </button>
-            </div>
-          )}
-        </nav>
-
-        {/* BOTTOM AREA */}
-        <div className="mt-8 flex flex-col gap-3 pt-6 border-t-2 border-amber-100/70 relative z-10">
-          {userSession?.role === "siswa" && (
+            {/* PETUALANGAN BELAJAR */}
             <button
-              onClick={handleChangeMode}
+              onClick={() => setActiveTab("katalog")}
               data-dashboard-area="sidebar"
-              data-scan-label={`Mode ${activeMode}`}
-              id="sidebar-btn-mode"
-              className="w-full px-5 py-4 bg-white/80 hover:bg-white text-amber-900 border-2 border-white/90 ring-1 ring-amber-200/70 shadow-xs hover:shadow-md font-black rounded-[24px] transition-all flex items-center justify-center gap-3 cursor-pointer"
+              data-scan-label="Petualangan Belajar"
+              id="sidebar-btn-katalog"
+              className={`flex items-center gap-4 px-5 py-4 rounded-[28px] font-black text-xl transition-all ${activeTab === "katalog" ? "bg-gradient-to-r from-amber-400 to-amber-500 text-white shadow-md shadow-amber-500/20" : "bg-transparent text-slate-700 hover:bg-amber-50 hover:text-amber-900 font-bold"}`}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-              {activeMode}
+              <div className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 ${activeTab === "katalog" ? "bg-white/20 text-white" : "bg-amber-100/70 text-amber-700"}`}>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+              </div>
+              Petualangan Belajar
             </button>
-          )}
 
-          <button
-            onClick={() => { clearActiveSession(); router.push("/"); }}
-            data-dashboard-area="sidebar"
-            data-scan-label="Keluar Akun"
-            id="sidebar-btn-logout"
-            className="w-full px-5 py-4 bg-rose-50/80 hover:bg-rose-100 border-2 border-rose-200/80 shadow-xs hover:shadow-md text-rose-600 font-black rounded-[24px] transition-all flex items-center justify-center gap-3 cursor-pointer"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-            Keluar Akun
-          </button>
-        </div>
-      </aside>
+            {/* KELAS IMPIANKU */}
+            <button
+              onClick={() => setActiveTab("kelas")}
+              data-dashboard-area="sidebar"
+              data-scan-label="Kelas Impianku"
+              id="sidebar-btn-kelas"
+              className={`flex items-center gap-4 px-5 py-4 rounded-[28px] font-black text-xl transition-all ${activeTab === "kelas" ? "bg-gradient-to-r from-amber-400 to-amber-500 text-white shadow-md shadow-amber-500/20" : "bg-transparent text-slate-700 hover:bg-amber-50 hover:text-amber-900 font-bold"}`}
+            >
+              <div className={`w-10 h-10 flex items-center justify-center rounded-xl shrink-0 ${activeTab === "kelas" ? "bg-white/20 text-white" : "bg-amber-100/70 text-amber-700"}`}>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+              </div>
+              Kelas Impianku
+            </button>
+
+            {/* SUB-MENUS KELAS IMPIANKU */}
+            {activeTab === "kelas" && (
+              <div className="ml-8 mt-1 flex flex-col gap-2 relative">
+                <div className="absolute left-[-16px] top-0 bottom-6 w-1 bg-amber-200 rounded-full"></div>
+
+                <button
+                  onClick={() => setActiveSidebarTab("kelas")}
+                  data-dashboard-area="sidebar"
+                  data-scan-label="Tab Kelas"
+                  id="sidebar-btn-sub-kelas"
+                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-lg transition-all ${activeSidebarTab === "kelas" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
+                >
+                  <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9.5a2 2 0 00-2-2h-2" /></svg>
+                  Kelas
+                </button>
+
+                <button
+                  onClick={() => setActiveSidebarTab("materi")}
+                  data-dashboard-area="sidebar"
+                  data-scan-label="Buku Pintar"
+                  id="sidebar-btn-sub-buku"
+                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-lg transition-all ${activeSidebarTab === "materi" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
+                >
+                  <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                  Buku Pintar
+                </button>
+
+                <button
+                  onClick={() => setActiveSidebarTab("latihan")}
+                  data-dashboard-area="sidebar"
+                  data-scan-label="Tantangan"
+                  id="sidebar-btn-sub-tantangan"
+                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-lg transition-all ${activeSidebarTab === "latihan" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
+                >
+                  <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /></svg>
+                  Tantangan
+                </button>
+
+                <button
+                  onClick={() => setActiveSidebarTab("ujian")}
+                  data-dashboard-area="sidebar"
+                  data-scan-label="Misi Akhir"
+                  id="sidebar-btn-sub-ujian"
+                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl font-bold text-lg transition-all ${activeSidebarTab === "ujian" ? "bg-amber-100/80 text-amber-900 font-extrabold translate-x-2 shadow-xs" : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-amber-50/50"}`}
+                >
+                  <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                  Misi Akhir
+                </button>
+              </div>
+            )}
+          </nav>
+
+          {/* BOTTOM AREA */}
+          <div className="mt-8 flex flex-col gap-3 pt-6 border-t-2 border-amber-100/70 relative z-10">
+            {userSession?.role === "siswa" && (
+              <button
+                onClick={handleChangeMode}
+                data-dashboard-area="sidebar"
+                data-scan-label={`Mode ${activeMode}`}
+                id="sidebar-btn-mode"
+                className="w-full px-5 py-4 bg-white/80 hover:bg-white text-amber-900 border-2 border-white/90 ring-1 ring-amber-200/70 shadow-xs hover:shadow-md font-black rounded-[24px] transition-all flex items-center justify-center gap-3 cursor-pointer"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                {activeMode}
+              </button>
+            )}
+
+            <button
+              onClick={() => { clearActiveSession(); router.push("/"); }}
+              data-dashboard-area="sidebar"
+              data-scan-label="Keluar Akun"
+              id="sidebar-btn-logout"
+              className="w-full px-5 py-4 bg-rose-50/80 hover:bg-rose-100 border-2 border-rose-200/80 shadow-xs hover:shadow-md text-rose-600 font-black rounded-[24px] transition-all flex items-center justify-center gap-3 cursor-pointer"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+              Keluar Akun
+            </button>
+          </div>
+        </aside>
       )}
 
       {/* ==================== 2. MAIN CONTENT ==================== */}
@@ -2013,7 +2013,7 @@ export default function DashboardPage() {
                     <div className="absolute -top-[1.5px] left-1/2 -translate-x-1/2 w-48 md:w-64 h-[3px] bg-white rounded-full shadow-[0_0_16px_5px_rgba(255,255,255,1)] pointer-events-none" />
                     {/* Glass highlight band */}
                     <div className="absolute top-0 left-0 right-0 h-28 bg-gradient-to-b from-white/45 via-white/10 to-transparent pointer-events-none rounded-t-[30px]" />
-                    
+
                     <h3 className="text-xl md:text-2xl font-black text-slate-800 mb-6 flex items-center space-x-3 relative z-10">
                       <svg className="w-8 h-8 text-amber-500 fill-current" viewBox="0 0 24 24">
                         <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
@@ -2073,20 +2073,18 @@ export default function DashboardPage() {
                                 )}
                               </div>
                               <div
-                                className={`max-w-lg p-4 rounded-2xl text-xs md:text-sm font-medium leading-relaxed ${
-                                  isMe
+                                className={`max-w-lg p-4 rounded-2xl text-xs md:text-sm font-medium leading-relaxed ${isMe
                                     ? "bg-gradient-to-r from-amber-400 to-amber-500 text-white rounded-tr-none shadow-md shadow-amber-500/20 border border-amber-300"
                                     : isGuru
-                                    ? "bg-white/90 border-2 border-white ring-1 ring-amber-300 text-slate-800 rounded-tl-none shadow-xs"
-                                    : "bg-white/80 border-2 border-white ring-1 ring-amber-200/40 text-slate-800 rounded-tl-none shadow-xs"
-                                }`}
+                                      ? "bg-white/90 border-2 border-white ring-1 ring-amber-300 text-slate-800 rounded-tl-none shadow-xs"
+                                      : "bg-white/80 border-2 border-white ring-1 ring-amber-200/40 text-slate-800 rounded-tl-none shadow-xs"
+                                  }`}
                               >
                                 <p>{msg.text}</p>
                                 <button
                                   onClick={() => speakText(`${msg.sender} mengatakan: ${msg.text}`)}
-                                  className={`mt-2 text-[11px] font-bold ${
-                                    isMe ? "text-white/95 hover:underline" : "text-amber-700 hover:underline"
-                                  }`}
+                                  className={`mt-2 text-[11px] font-bold ${isMe ? "text-white/95 hover:underline" : "text-amber-700 hover:underline"
+                                    }`}
                                 >
                                   Bacakan Pesan
                                 </button>
@@ -2215,20 +2213,21 @@ export default function DashboardPage() {
                                     );
                                   })}
                                 </div>
-                              {quizSubmitted && selectedOpt !== undefined && (
-                                <div className={`mt-3 p-4 rounded-xl text-xs md:text-sm font-bold ${isCorrect ? "bg-emerald-100 text-emerald-900 border border-emerald-200" : "bg-rose-100 text-rose-900 border border-rose-200"}`}>
-                                  {isCorrect ? "Benar! " : "Kurang Tepat. "} {q.explanation}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <div className="mt-8 flex items-center justify-center">
-                        {quizSubmitted ? (
-                          <span className="font-black text-sm text-emerald-600 bg-emerald-50 px-6 py-2.5 rounded-full border border-emerald-200">Skor Berhasil Dicatat!</span>
-                        ) : (
-                          <button id="btn-submit-latihan" data-scan-label="Kumpulkan Jawaban Latihan" onClick={async () => { const totalQuestions = quiz.questions.length;
+                                {quizSubmitted && selectedOpt !== undefined && (
+                                  <div className={`mt-3 p-4 rounded-xl text-xs md:text-sm font-bold ${isCorrect ? "bg-emerald-100 text-emerald-900 border border-emerald-200" : "bg-rose-100 text-rose-900 border border-rose-200"}`}>
+                                    {isCorrect ? "Benar! " : "Kurang Tepat. "} {q.explanation}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="mt-8 flex items-center justify-center">
+                          {quizSubmitted ? (
+                            <span className="font-black text-sm text-emerald-600 bg-emerald-50 px-6 py-2.5 rounded-full border border-emerald-200">Skor Berhasil Dicatat!</span>
+                          ) : (
+                            <button id="btn-submit-latihan" data-scan-label="Kumpulkan Jawaban Latihan" onClick={async () => {
+                              const totalQuestions = quiz.questions.length;
                               let correct = 0;
                               quiz.questions.forEach(q => {
                                 if (quizAnswers[q.id] === q.answerIndex) correct++;
@@ -2255,15 +2254,15 @@ export default function DashboardPage() {
                                 });
                               }
                             }}
-                            className="px-8 py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-sm md:text-base rounded-full shadow-md hover:scale-105 transition-all cursor-pointer"
-                          >
-                            Kirim Jawaban Latihan Soal
-                          </button>
-                        )}
+                              className="px-8 py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-sm md:text-base rounded-full shadow-md hover:scale-105 transition-all cursor-pointer"
+                            >
+                              Kirim Jawaban Latihan Soal
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
                 </div>
               )}
 
@@ -2289,9 +2288,8 @@ export default function DashboardPage() {
                           Menunggu Guru Memulai Timer
                         </span>
                       ) : (
-                        <span className={`text-xs md:text-sm font-extrabold px-4 py-2 rounded-xl border shrink-0 flex items-center gap-2 ${
-                          examTimer < 300 ? "text-rose-600 bg-rose-50 border-rose-300 animate-pulse" : "text-amber-900 bg-white border-amber-200"
-                        }`}>
+                        <span className={`text-xs md:text-sm font-extrabold px-4 py-2 rounded-xl border shrink-0 flex items-center gap-2 ${examTimer < 300 ? "text-rose-600 bg-rose-50 border-rose-300 animate-pulse" : "text-amber-900 bg-white border-amber-200"
+                          }`}>
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                           Sisa Waktu: {formatTime(examTimer)}
                         </span>
@@ -2405,34 +2403,35 @@ export default function DashboardPage() {
                             Ujian Resmi Berhasil Dikumpulkan! Jawaban Pilihan Ganda & Essay Diteruskan ke Guru Kelas.
                           </div>
                         ) : (
-                          <button id="btn-exam-normal-submit" data-scan-label="Kumpulkan Ujian" onClick={async () => { let pgCorrect = 0;
-                              let pgTotal = 0;
-                              exam.questions.forEach((q) => {
-                                if (q.type !== "essay") {
-                                  pgTotal++;
-                                  if (examAnswers[q.id] === q.answerIndex) pgCorrect++;
-                                }
-                              });
-                              const pgWrong = pgTotal - pgCorrect;
-
-                              setExamSubmitted(true);
-                              speakText("Ujian resmi berhasil dikumpulkan.");
-
-                              if (userSession && room) {
-                                await saveExamSubmission({
-                                  examId: exam.id,
-                                  roomCode: room.code,
-                                  studentId: userSession.id,
-                                  studentName: userSession.name,
-                                  examTitle: exam.title,
-                                  pgAnswers: examAnswers,
-                                  essayAnswers: examEssayAnswers,
-                                  pgCorrect,
-                                  pgWrong,
-                                  totalPgQuestions: pgTotal,
-                                });
+                          <button id="btn-exam-normal-submit" data-scan-label="Kumpulkan Ujian" onClick={async () => {
+                            let pgCorrect = 0;
+                            let pgTotal = 0;
+                            exam.questions.forEach((q) => {
+                              if (q.type !== "essay") {
+                                pgTotal++;
+                                if (examAnswers[q.id] === q.answerIndex) pgCorrect++;
                               }
-                            }}
+                            });
+                            const pgWrong = pgTotal - pgCorrect;
+
+                            setExamSubmitted(true);
+                            speakText("Ujian resmi berhasil dikumpulkan.");
+
+                            if (userSession && room) {
+                              await saveExamSubmission({
+                                examId: exam.id,
+                                roomCode: room.code,
+                                studentId: userSession.id,
+                                studentName: userSession.name,
+                                examTitle: exam.title,
+                                pgAnswers: examAnswers,
+                                essayAnswers: examEssayAnswers,
+                                pgCorrect,
+                                pgWrong,
+                                totalPgQuestions: pgTotal,
+                              });
+                            }
+                          }}
                             className="px-10 py-5 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-lg rounded-full shadow-lg transition-all hover:-translate-y-1 active:translate-y-1 cursor-pointer"
                           >
                             Kumpulkan Ujian
@@ -2642,9 +2641,8 @@ export default function DashboardPage() {
                             <span>Menunggu Guru Memulai Timer Ujian Room {room.code}</span>
                           </div>
                         ) : (
-                          <div className={`text-4xl font-black bg-white py-4 rounded-2xl border-2 shadow-inner tracking-widest font-mono ${
-                            examTimer < 300 ? "text-rose-600 border-rose-300 animate-pulse" : "text-rose-600 border-rose-200"
-                          }`}>
+                          <div className={`text-4xl font-black bg-white py-4 rounded-2xl border-2 shadow-inner tracking-widest font-mono ${examTimer < 300 ? "text-rose-600 border-rose-300 animate-pulse" : "text-rose-600 border-rose-200"
+                            }`}>
                             {formatTime(examTimer)}
                           </div>
                         )}
@@ -3274,13 +3272,13 @@ export default function DashboardPage() {
                                                 prev.map((s) =>
                                                   s.id === student.id
                                                     ? {
-                                                        ...s,
+                                                      ...s,
+                                                      pin_code: newPin,
+                                                      accessibility_config: {
+                                                        ...(s.accessibility_config || {}),
                                                         pin_code: newPin,
-                                                        accessibility_config: {
-                                                          ...(s.accessibility_config || {}),
-                                                          pin_code: newPin,
-                                                        },
-                                                      }
+                                                      },
+                                                    }
                                                     : s
                                                 )
                                               );
@@ -4003,11 +4001,10 @@ export default function DashboardPage() {
                                     type="button"
                                     disabled={teacherRoomTimer.isActive}
                                     onClick={() => setGuruTimerDuration(m)}
-                                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                                      guruTimerDuration === m
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${guruTimerDuration === m
                                         ? "bg-amber-500 text-white shadow-xs"
                                         : "bg-white/90 hover:bg-white text-slate-700 border border-amber-200 disabled:opacity-50"
-                                    }`}
+                                      }`}
                                   >
                                     {m}m
                                   </button>
@@ -4424,8 +4421,9 @@ export default function DashboardPage() {
                   ← Kartu Sebelum
                 </button>
 
-                <button id="btn-flashcard-sound" data-scan-label="Suara Kartu" onClick={() => { const fc = activeFlashcardMaterial.flashcards[flashcardIndex]; speakText(isFlipped ? `Jawaban: ${fc.back}` : `Pertanyaan: ${fc.front}`);
-                  }}
+                <button id="btn-flashcard-sound" data-scan-label="Suara Kartu" onClick={() => {
+                  const fc = activeFlashcardMaterial.flashcards[flashcardIndex]; speakText(isFlipped ? `Jawaban: ${fc.back}` : `Pertanyaan: ${fc.front}`);
+                }}
                   className="px-6 py-3.5 bg-amber-50 text-amber-900 border-2 border-amber-200 font-extrabold text-sm md:text-base rounded-xl hover:bg-amber-100 transition-all flex items-center space-x-2"
                 >
                   <svg className="w-5 h-5 fill-none stroke-current" strokeWidth="2" viewBox="0 0 24 24">

@@ -12,60 +12,120 @@ import { LoginScreen } from "@/components/LoginScreen";
 export default function Page() {
   const router = useRouter();
 
+  // State apakah sedang memproses callback OAuth Google
+  const [isAuthProcessing, setIsAuthProcessing] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    const search = window.location.search || "";
+    const hash = window.location.hash || "";
+    return search.includes("code=") || hash.includes("access_token=");
+  });
+
   // 0. Auto Check Supabase OAuth Callback
   useEffect(() => {
-    // Listen for OAuth callbacks from Supabase
+    if (typeof window !== "undefined") {
+      const search = window.location.search || "";
+      const hash = window.location.hash || "";
+      
+      // Jika ada error dari provider OAuth
+      if (search.includes("error=") || hash.includes("error=")) {
+        console.warn("OAuth error detected in URL");
+        setIsAuthProcessing(false);
+        setScreenState("auth");
+        return;
+      }
+    }
+
+    // Safety timeout: Jangan biarkan user stuck di loading OAuth lebih dari 8 detik
+    const authTimeout = setTimeout(() => {
+      setIsAuthProcessing(false);
+    }, 8000);
+
+    const processSignedInUser = async (session: any) => {
+      if (!session?.user) return;
+      clearTimeout(authTimeout);
+
+      const name =
+        session.user.user_metadata?.full_name ||
+        session.user.user_metadata?.name ||
+        session.user.email?.split("@")[0] ||
+        "Guru PINTARA";
+      const email = session.user.email || "";
+
+      const pendingRole =
+        (typeof window !== "undefined" ? localStorage.getItem("pintara_pending_role") : null) || "guru";
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("pintara_pending_role");
+      }
+
+      const isGuru = pendingRole === "guru";
+      const defaultConfig = isGuru
+        ? { mainMode: "guru_normal", specificMode: null, physicalControlMethod: null }
+        : { mainMode: "sensorik", specificMode: "tunanetra" };
+
+      const newSession: UserSession = {
+        id: session.user.id,
+        name: name,
+        emailOrNip: email,
+        role: pendingRole as "siswa" | "guru",
+        isLoggedIn: true,
+        createdAt: new Date().toISOString(),
+        accessibilityConfig: defaultConfig,
+      };
+
+      setActiveSession(newSession);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("pintara_a11y_config", JSON.stringify(defaultConfig));
+      }
+
+      // Upsert profile secara async tanpa memblokir navigasi
+      (async () => {
+        try {
+          await supabase.from("profiles").upsert(
+            {
+              id: session.user.id,
+              email: email,
+              full_name: name,
+              role: pendingRole,
+              nip_or_nuptk: null,
+              accessibility_config: defaultConfig,
+            },
+            { onConflict: "id" }
+          );
+        } catch (e) {
+          console.log("OAuth profile sync error:", e);
+        }
+      })();
+
+      setIsAuthProcessing(false);
+      router.push("/dashboard");
+    };
+
+    // 1. Listen for OAuth callbacks from Supabase
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_IN" && session?.user) {
-        // Build user session from Google Data
-        const name = session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "Siswa PINTARA";
-        const email = session.user.email || "";
+      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
+        // Hanya proses otomatis jika sedang dalam flow callback OAuth atau pending role ada
+        const hasPendingRole = typeof window !== "undefined" && !!localStorage.getItem("pintara_pending_role");
+        const hasOAuthParam = typeof window !== "undefined" && (window.location.search.includes("code=") || window.location.hash.includes("access_token="));
+        
+        if (hasPendingRole || hasOAuthParam) {
+          await processSignedInUser(session);
+        }
+      }
+    });
 
-        const currentActive = getActiveSession();
-        if (!currentActive) {
-          const pendingRole = localStorage.getItem("pintara_pending_role") || "siswa";
-          localStorage.removeItem("pintara_pending_role");
-
-          const isGuru = pendingRole === "guru";
-          const defaultConfig = isGuru
-            ? { mainMode: "guru_normal", specificMode: null, physicalControlMethod: null }
-            : { mainMode: "sensorik", specificMode: "tunanetra" };
-          const newSession: UserSession = {
-            id: session.user.id,
-            name: name,
-            emailOrNip: email,
-            role: pendingRole as "siswa" | "guru",
-            isLoggedIn: true,
-            createdAt: new Date().toISOString(),
-            accessibilityConfig: defaultConfig,
-          };
-
-          setActiveSession(newSession);
-          localStorage.setItem("pintara_a11y_config", JSON.stringify(defaultConfig));
-
-          // Upsert profile for OAuth login
-          try {
-            await supabase.from("profiles").upsert(
-              {
-                id: session.user.id,
-                email: email,
-                full_name: name,
-                role: pendingRole,
-                nip_or_nuptk: null,
-                accessibility_config: defaultConfig,
-              },
-              { onConflict: "id" }
-            );
-          } catch (e) {
-            console.log("OAuth profile sync error:", e);
-          }
-
-          router.push("/dashboard");
+    // 2. Fallback jika session sudah terisi saat pertama kali render
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const hasPendingRole = typeof window !== "undefined" && !!localStorage.getItem("pintara_pending_role");
+        const hasOAuthParam = typeof window !== "undefined" && (window.location.search.includes("code=") || window.location.hash.includes("access_token="));
+        if (hasPendingRole || hasOAuthParam) {
+          processSignedInUser(session);
         }
       }
     });
 
     return () => {
+      clearTimeout(authTimeout);
       authListener.subscription.unsubscribe();
     };
   }, [router]);
@@ -133,8 +193,8 @@ export default function Page() {
     }
   }, [screenState]);
 
-  // Render Layar 1: Loading Screen
-  if (screenState === "loading") {
+  // Render Layar 1: Loading Screen / OAuth Processing
+  if (screenState === "loading" || isAuthProcessing) {
     return (
       <div className="min-h-screen bg-[#FFF9EE] relative overflow-hidden flex flex-col items-center justify-center p-4">
         <div className="absolute top-1/3 left-1/3 w-96 h-96 bg-amber-200/30 rounded-full blur-[140px] pointer-events-none" />
@@ -150,6 +210,12 @@ export default function Page() {
             <span className="w-2.5 h-2.5 bg-amber-500 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
             <span className="w-2.5 h-2.5 bg-amber-600 rounded-full animate-bounce"></span>
           </div>
+
+          {isAuthProcessing && (
+            <p className="mt-5 text-slate-700 font-bold text-sm md:text-base animate-pulse">
+              Memverifikasi akun Guru... Mohon tunggu sebentar
+            </p>
+          )}
         </div>
       </div>
     );
